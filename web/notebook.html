@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notebook · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <style>
+    .page.narrow { max-width:1280px; }
+    .notebook { display:grid; grid-template-columns:260px minmax(0,1fr); min-height:650px; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 18px 55px rgba(55,53,47,.08); }
+    .note-sidebar { display:flex; min-width:0; flex-direction:column; border-right:1px solid var(--line); background:rgba(247,246,243,.72); }
+    .note-sidebar-head { padding:14px 14px 11px; border-bottom:1px solid var(--line); }
+    .note-sidebar-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; color:var(--ink-2); font-size:11px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; }
+    .note-count { min-width:23px; padding:1px 7px; border-radius:999px; background:rgba(55,53,47,.08); color:var(--ink-2); text-align:center; font-size:10px; }
+    .note-tools { display:flex; gap:7px; }
+    .note-search-wrap { position:relative; min-width:0; flex:1; }
+    .note-search-icon { position:absolute; left:9px; top:50%; color:var(--ink-3); transform:translateY(-50%); pointer-events:none; }
+    .note-search { width:100%; min-width:0; border:1px solid var(--line); border-radius:7px; padding:8px 9px 8px 28px; outline:0; background:rgba(255,255,255,.78); color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+    .note-search:focus { border-color:rgba(46,170,220,.55); box-shadow:0 0 0 3px var(--accent-soft); }
+    .note-new, .note-save, .note-delete, .mode-button, .format-button, .help-button { border:1px solid var(--line); border-radius:7px; cursor:pointer; background:rgba(255,255,255,.84); color:var(--ink); }
+    .note-new { width:34px; padding:0; font-size:19px; line-height:32px; }
+    .note-new:hover, .format-button:hover, .mode-button:hover, .help-button:hover { background:var(--bg-hover); border-color:var(--line-strong); }
+    .note-list { display:flex; flex:1; min-height:0; flex-direction:column; gap:3px; padding:8px; overflow:auto; }
+    .note-item { width:100%; border:1px solid transparent; border-radius:7px; padding:9px 10px; text-align:left; cursor:pointer; background:transparent; color:var(--ink); }
+    .note-item:hover { background:rgba(255,255,255,.62); }
+    .note-item.active { border-color:var(--line); background:rgba(255,255,255,.92); box-shadow:0 3px 12px rgba(55,53,47,.05); }
+    .note-item strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:600; }
+    .note-item p { display:-webkit-box; overflow:hidden; margin:3px 0 5px; color:var(--ink-2); font-size:11px; line-height:1.4; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+    .note-item small { color:var(--ink-3); font-size:10px; }
+    .note-empty { display:grid; min-height:160px; padding:24px; place-items:center; align-content:center; color:var(--ink-3); text-align:center; font-size:12px; }
+    .note-empty span { display:block; margin-bottom:8px; font-size:26px; opacity:.65; }
+    .note-editor { position:relative; display:flex; min-width:0; min-height:0; flex-direction:column; background:rgba(255,255,255,.82); }
+    .note-editor-head { display:flex; min-height:66px; padding:12px 16px 10px 20px; align-items:center; gap:9px; border-bottom:1px solid var(--line); }
+    .note-title-wrap { min-width:0; flex:1; }
+    .note-title { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--ink); font-family:inherit; font-size:22px; font-weight:650; line-height:1.25; letter-spacing:-.015em; }
+    .note-title::placeholder { color:var(--ink-3); }
+    .note-meta-line { display:flex; gap:7px; margin-top:3px; color:var(--ink-3); font-size:10px; }
+    .note-meta-line span + span::before { content:"·"; margin-right:7px; }
+    .note-save, .note-delete { padding:7px 12px; white-space:nowrap; }
+    .note-save { border-color:var(--accent); background:var(--accent); color:white; font-weight:600; }
+    .note-save:hover { filter:brightness(.96); }
+    .note-delete { width:34px; padding:7px 0; color:var(--bad); font-size:16px; }
+    button:disabled, input:disabled, textarea:disabled { cursor:not-allowed; opacity:.45; }
+    .note-toolbar { display:flex; min-height:47px; padding:7px 10px 7px 14px; align-items:center; gap:5px; border-bottom:1px solid var(--line); background:rgba(247,246,243,.58); }
+    .format-group { display:flex; align-items:center; gap:3px; }
+    .format-group + .format-group { margin-left:3px; padding-left:8px; border-left:1px solid var(--line-strong); }
+    .format-button, .help-button { display:grid; width:31px; height:31px; padding:0; place-items:center; font-size:13px; font-weight:600; }
+    .format-button code { font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .format-button em { font-family:Georgia,serif; font-size:16px; }
+    .toolbar-spacer { flex:1; }
+    .mode-switch { display:flex; padding:2px; gap:2px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.72); }
+    .mode-button { padding:5px 9px; border:0; background:transparent; color:var(--ink-2); font-size:11px; }
+    .mode-button.active { background:white; color:var(--ink); box-shadow:0 1px 4px rgba(55,53,47,.12); }
+    .help-button { margin-left:4px; border-radius:50%; color:var(--ink-2); }
+    .note-workspace { display:grid; min-height:500px; flex:1; overflow:hidden; }
+    .note-workspace[data-mode="split"] { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+    .note-workspace[data-mode="edit"], .note-workspace[data-mode="preview"] { grid-template-columns:minmax(0,1fr); }
+    .note-workspace[data-mode="edit"] .preview-pane, .note-workspace[data-mode="preview"] .write-pane { display:none; }
+    .write-pane, .preview-pane { min-width:0; min-height:0; overflow:auto; }
+    .write-pane { display:flex; background:rgba(255,255,255,.48); }
+    .note-workspace[data-mode="split"] .write-pane { border-right:1px solid var(--line); }
+    .note-body { width:100%; min-height:100%; padding:24px 26px 80px; resize:none; border:0; outline:0; background:transparent; color:var(--ink); font:14px/1.78 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; tab-size:2; }
+    .note-body::placeholder { color:var(--ink-3); }
+    .preview-pane { padding:24px 30px 80px; background:rgba(250,250,249,.58); }
+    .markdown-preview { max-width:760px; margin:0 auto; overflow-wrap:anywhere; color:var(--ink); font-size:15px; line-height:1.75; }
+    .markdown-preview > :first-child { margin-top:0; }
+    .markdown-preview h1, .markdown-preview h2, .markdown-preview h3, .markdown-preview h4, .markdown-preview h5, .markdown-preview h6 { margin:1.35em 0 .55em; color:var(--ink); line-height:1.3; letter-spacing:-.015em; }
+    .markdown-preview h1 { padding-bottom:.3em; border-bottom:1px solid var(--line); font-size:2em; }
+    .markdown-preview h2 { padding-bottom:.25em; border-bottom:1px solid var(--line); font-size:1.5em; }
+    .markdown-preview h3 { font-size:1.22em; }
+    .markdown-preview p { margin:.75em 0; }
+    .markdown-preview a { color:var(--accent-ink); text-decoration:underline; text-decoration-color:rgba(11,110,145,.28); text-underline-offset:3px; }
+    .markdown-preview code { padding:.15em .38em; border-radius:4px; background:rgba(55,53,47,.07); color:#b13b2c; font:.9em ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .markdown-preview pre { position:relative; margin:1em 0; padding:16px 18px; overflow:auto; border:1px solid #2d2d2d; border-radius:8px; background:#242424; color:#ececec; line-height:1.65; }
+    .markdown-preview pre code { padding:0; background:none; color:inherit; }
+    .markdown-preview pre[data-lang]::before { content:attr(data-lang); position:absolute; top:7px; right:10px; color:#969696; font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+    .markdown-preview blockquote { margin:1em 0; padding:4px 16px; border-left:3px solid var(--accent); color:var(--ink-2); background:var(--accent-soft); }
+    .markdown-preview blockquote p { margin:.45em 0; }
+    .markdown-preview ul, .markdown-preview ol { margin:.8em 0; padding-left:1.7em; }
+    .markdown-preview li { margin:.28em 0; }
+    .markdown-preview ul.task-list { padding-left:.2em; list-style:none; }
+    .markdown-preview .task-item { display:flex; align-items:flex-start; gap:8px; }
+    .markdown-preview .task-item input { margin-top:.48em; accent-color:var(--accent); }
+    .markdown-preview hr { margin:2em 0; border:0; border-top:1px solid var(--line-strong); }
+    .markdown-preview table { width:100%; margin:1em 0; border-collapse:collapse; font-size:13px; }
+    .markdown-preview th, .markdown-preview td { padding:8px 10px; border:1px solid var(--line-strong); text-align:left; }
+    .markdown-preview th { background:var(--bg-soft); font-weight:650; }
+    .preview-empty { display:grid; min-height:300px; place-items:center; align-content:center; color:var(--ink-3); text-align:center; }
+    .preview-empty span { margin-bottom:9px; font-size:30px; opacity:.55; }
+    .note-footer { display:flex; min-height:34px; padding:7px 14px; align-items:center; gap:12px; border-top:1px solid var(--line); background:rgba(247,246,243,.6); color:var(--ink-3); font-size:11px; }
+    .note-status { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .note-status[data-state="dirty"] { color:var(--warn); }
+    .note-status[data-state="saved"] { color:var(--good); }
+    .editor-stats { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .markdown-help { position:absolute; z-index:20; right:20px; top:116px; width:min(360px,calc(100% - 40px)); padding:14px; border:1px solid var(--line-strong); border-radius:10px; background:rgba(255,255,255,.97); box-shadow:0 16px 45px rgba(55,53,47,.18); }
+    .markdown-help[hidden] { display:none; }
+    .markdown-help-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .markdown-help-head strong { font-size:13px; }
+    .markdown-help-head button { border:0; background:none; color:var(--ink-2); cursor:pointer; font-size:17px; }
+    .syntax-grid { display:grid; grid-template-columns:auto 1fr; gap:7px 12px; margin:0; font-size:11px; }
+    .syntax-grid dt { color:var(--ink-2); }
+    .syntax-grid dd { margin:0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    @media (max-width:900px) {
+      .notebook { grid-template-columns:220px minmax(0,1fr); }
+      .format-group:nth-of-type(3) { display:none; }
+      .mode-button[data-mode="split"] { display:none; }
+      .note-workspace[data-mode="split"] { grid-template-columns:1fr; }
+      .note-workspace[data-mode="split"] .preview-pane { display:none; }
+    }
+    @media (max-width:700px) {
+      .page { padding-left:12px; padding-right:12px; }
+      .notebook { grid-template-columns:1fr; min-height:760px; }
+      .note-sidebar { max-height:210px; border-right:0; border-bottom:1px solid var(--line); }
+      .note-list { min-height:92px; }
+      .note-item p { display:none; }
+      .note-editor-head { min-height:60px; padding-left:14px; }
+      .note-title { font-size:19px; }
+      .note-delete { display:none; }
+      .note-toolbar { overflow-x:auto; }
+      .format-group { flex:0 0 auto; }
+      .format-group:nth-of-type(2) { border-right:0; }
+      .toolbar-spacer { min-width:3px; }
+      .mode-switch { position:sticky; right:0; flex:0 0 auto; }
+      .mode-button { padding:5px 8px; }
+      .note-body, .preview-pane { padding:20px 18px 70px; }
+      .note-footer { position:sticky; bottom:0; }
+    }
+    /* 视图切换、标签筛选、置顶分组 */
+    .note-views { display:flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:7px; background:rgba(255,255,255,.6); letter-spacing:0; text-transform:none; }
+    .note-view { padding:3px 9px; border:0; border-radius:5px; cursor:pointer; background:transparent; color:var(--ink-2); font-size:11px; font-weight:600; }
+    .note-view.active { background:white; color:var(--ink); box-shadow:0 1px 3px rgba(55,53,47,.12); }
+    .note-view small { margin-left:3px; color:var(--ink-3); font-weight:500; }
+    .tag-filter { display:flex; flex-wrap:wrap; gap:4px; margin-top:9px; max-height:74px; overflow:auto; }
+    .tag-filter:empty { display:none; }
+    .tag-chip { display:inline-flex; align-items:center; gap:3px; max-width:100%; padding:2px 8px; border:1px solid transparent; border-radius:999px; background:rgba(46,170,220,.1); color:var(--accent-ink); font-size:11px; line-height:1.5; white-space:nowrap; }
+    button.tag-chip { cursor:pointer; }
+    button.tag-chip:hover { border-color:rgba(46,170,220,.4); }
+    .tag-chip.active { background:var(--accent); color:white; }
+    .tag-chip small { opacity:.7; }
+    .note-group-label { padding:8px 10px 3px; color:var(--ink-3); font-size:10px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; }
+    .note-item-tags { display:flex; flex-wrap:wrap; gap:3px; margin:0 0 5px; }
+    .note-item-tags .tag-chip { padding:0 6px; font-size:10px; }
+    .note-item small { display:flex; align-items:center; gap:6px; }
+    .note-item .unsynced { width:6px; height:6px; border-radius:50%; background:var(--warn); }
+    .note-item strong .pin-mark { margin-right:4px; font-size:11px; }
+    /* 编辑区头部：标签编辑、置顶/归档按钮 */
+    .note-editor-head { align-items:flex-start; }
+    .note-head-actions { display:flex; gap:6px; padding-top:3px; }
+    .note-icon-button { display:grid; width:34px; height:32px; padding:0; place-items:center; border:1px solid var(--line); border-radius:7px; cursor:pointer; background:rgba(255,255,255,.84); color:var(--ink-2); font-size:15px; }
+    .note-icon-button:hover { background:var(--bg-hover); border-color:var(--line-strong); }
+    .note-icon-button[aria-pressed="true"] { border-color:rgba(46,170,220,.5); background:var(--accent-soft); color:var(--accent-ink); }
+    .note-delete { height:32px; }
+    .note-tags { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:7px; }
+    .note-tags .tag-chip button { margin:0 -3px 0 1px; padding:0; border:0; cursor:pointer; background:none; color:inherit; font-size:12px; line-height:1; opacity:.6; }
+    .note-tags .tag-chip button:hover { opacity:1; }
+    .tag-input { width:110px; min-width:0; padding:2px 4px; border:0; border-bottom:1px dashed transparent; outline:0; background:transparent; color:var(--ink); font-size:11px; }
+    .tag-input:focus { border-bottom-color:var(--line-strong); }
+    .tag-input::placeholder { color:var(--ink-3); }
+    .archived-badge { color:var(--warn); }
+    .archived-badge[hidden] { display:none; }
+    /* 附件：拖放提示、附件条、上传进度 */
+    .note-workspace { position:relative; }
+    .drop-overlay { position:absolute; z-index:15; inset:10px; display:none; place-items:center; border:2px dashed var(--accent); border-radius:10px; background:rgba(234,247,252,.88); color:var(--accent-ink); font-size:14px; font-weight:600; pointer-events:none; }
+    .note-editor.dragging .drop-overlay { display:grid; }
+    .note-attachments { display:flex; min-height:46px; padding:7px 14px; align-items:center; gap:7px; overflow-x:auto; border-top:1px solid var(--line); background:rgba(250,250,249,.7); }
+    .note-attachments[hidden] { display:none; }
+    .attach-label { flex:0 0 auto; color:var(--ink-3); font-size:11px; }
+    .attach-item { display:flex; flex:0 0 auto; max-width:240px; align-items:center; gap:7px; padding:3px 5px 3px 3px; border:1px solid var(--line); border-radius:7px; background:white; font-size:11px; }
+    .attach-thumb { display:grid; width:30px; height:30px; flex:0 0 auto; place-items:center; overflow:hidden; border-radius:5px; background:var(--bg-soft); font-size:14px; }
+    .attach-thumb img { width:100%; height:100%; object-fit:cover; }
+    .attach-name { min-width:0; overflow:hidden; color:var(--ink); text-decoration:none; text-overflow:ellipsis; white-space:nowrap; }
+    .attach-name:hover { text-decoration:underline; }
+    .attach-size { flex:0 0 auto; color:var(--ink-3); }
+    .attach-item button { flex:0 0 auto; padding:2px 4px; border:0; border-radius:4px; cursor:pointer; background:none; color:var(--ink-2); font-size:11px; }
+    .attach-item button:hover { background:var(--bg-hover); color:var(--ink); }
+    .attach-item button.danger:hover { color:var(--bad); }
+    .storage-usage { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .storage-usage[data-level="warn"] { color:var(--warn); }
+    .storage-usage[data-level="full"] { color:var(--bad); }
+    .note-status[data-state="saving"] { color:var(--ink-2); }
+    .note-status[data-state="error"] { color:var(--bad); }
+    .markdown-preview img { display:block; max-width:100%; height:auto; margin:.6em 0; border:1px solid var(--line); border-radius:6px; }
+    .markdown-preview a:has(> img) { display:inline-block; text-decoration:none; }
+    @media (max-width:700px) {
+      .note-tags { margin-top:5px; }
+      .storage-usage { display:none; }
+      .note-editor-head { flex-wrap:wrap; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar"><div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Notebook</span></div><div class="topbar-spacer"></div></div>
+    <div class="page narrow">
+      <h1 class="page-title">Notebook</h1>
+      <div class="page-meta"><span>Markdown 私人笔记 · 停止输入约 1 秒后自动保存 · 内容仅保存在你的服务器</span></div>
+      <section class="card notebook">
+        <aside class="note-sidebar">
+          <div class="note-sidebar-head">
+            <div class="note-sidebar-title"><div class="note-views" role="tablist" aria-label="笔记视图"><button class="note-view active" type="button" data-view="active" role="tab">笔记<small id="activeCount">0</small></button><button class="note-view" type="button" data-view="archived" role="tab">归档<small id="archivedCount">0</small></button></div><span id="noteCount" class="note-count" title="当前列表中的笔记数">0</span></div>
+            <div class="note-tools"><label class="note-search-wrap"><span class="note-search-icon" aria-hidden="true">⌕</span><input id="noteSearch" class="note-search" type="search" placeholder="搜索标题、正文或标签…" aria-label="搜索笔记"></label><button id="noteNew" class="note-new" type="button" title="新建笔记" aria-label="新建笔记">＋</button></div>
+            <div id="tagFilter" class="tag-filter" aria-label="按标签筛选"></div>
+          </div>
+          <div id="noteList" class="note-list"></div>
+        </aside>
+        <div id="noteEditor" class="note-editor">
+          <div class="note-editor-head">
+            <div class="note-title-wrap">
+              <input id="noteTitle" class="note-title" maxlength="200" placeholder="笔记标题" aria-label="笔记标题">
+              <div class="note-meta-line"><span id="noteUpdated">尚未选择笔记</span><span id="archivedBadge" class="archived-badge" hidden>已归档</span><span>Markdown</span></div>
+              <div id="noteTags" class="note-tags"><input id="tagInput" class="tag-input" maxlength="30" placeholder="＋ 添加标签" aria-label="添加标签（回车确认）"></div>
+            </div>
+            <div class="note-head-actions">
+              <button id="notePin" class="note-icon-button" type="button" aria-pressed="false" title="置顶">📌</button>
+              <button id="noteArchive" class="note-icon-button" type="button" aria-pressed="false" title="归档">🗄</button>
+              <button id="noteDelete" class="note-delete" type="button" title="删除笔记" aria-label="删除笔记">⌫</button>
+            </div>
+          </div>
+          <div id="noteToolbar" class="note-toolbar" aria-label="Markdown 格式工具栏">
+            <div class="format-group"><button class="format-button" type="button" data-format="heading" title="二级标题">H₂</button><button class="format-button" type="button" data-format="bold" title="粗体（Ctrl/⌘ + B）"><strong>B</strong></button><button class="format-button" type="button" data-format="italic" title="斜体（Ctrl/⌘ + I）"><em>I</em></button><button class="format-button" type="button" data-format="strike" title="删除线"><s>S</s></button><button class="format-button" type="button" data-format="code" title="行内代码"><code>&lt;/&gt;</code></button></div>
+            <div class="format-group"><button class="format-button" type="button" data-format="link" title="链接">↗</button><button class="format-button" type="button" data-format="quote" title="引用">❝</button><button class="format-button" type="button" data-format="bullet" title="无序列表">•≡</button><button class="format-button" type="button" data-format="number" title="有序列表">1.</button><button class="format-button" type="button" data-format="task" title="任务清单">☑</button></div>
+            <div class="format-group"><button class="format-button" type="button" data-format="codeblock" title="代码块"><code>{ }</code></button><button class="format-button" type="button" data-format="table" title="表格">▦</button><button class="format-button" type="button" data-format="rule" title="分隔线">―</button></div>
+            <div class="format-group"><button class="format-button" type="button" data-format="attach" title="插入图片或附件（也可以直接粘贴截图或拖入文件）">📎</button><input id="fileInput" type="file" multiple hidden></div>
+            <div class="toolbar-spacer"></div>
+            <div class="mode-switch" role="group" aria-label="编辑模式"><button class="mode-button" type="button" data-mode="edit">编辑</button><button class="mode-button" type="button" data-mode="split">分栏</button><button class="mode-button" type="button" data-mode="preview">预览</button></div>
+            <button id="helpToggle" class="help-button" type="button" aria-expanded="false" aria-controls="markdownHelp" title="Markdown 语法帮助">?</button>
+          </div>
+          <div id="noteWorkspace" class="note-workspace" data-mode="split">
+            <div class="write-pane"><textarea id="noteBody" class="note-body" maxlength="100000" spellcheck="true" placeholder="# 开始记录&#10;&#10;支持 Markdown；可直接粘贴截图或拖入文件。" aria-label="Markdown 笔记正文"></textarea></div>
+            <div class="preview-pane" aria-label="Markdown 预览"><article id="markdownPreview" class="markdown-preview"></article></div>
+            <div class="drop-overlay">松开鼠标上传到这篇笔记</div>
+          </div>
+          <div id="noteAttachments" class="note-attachments" hidden></div>
+          <div class="note-footer"><div id="noteStatus" class="note-status" role="status" aria-live="polite"></div><div id="storageUsage" class="storage-usage" title="附件已用空间 / 配额"></div><div id="editorStats" class="editor-stats">0 字 · 0 行</div></div>
+          <aside id="markdownHelp" class="markdown-help" hidden>
+            <div class="markdown-help-head"><strong>Markdown 快速参考</strong><button id="helpClose" type="button" aria-label="关闭帮助">×</button></div>
+            <dl class="syntax-grid"><dt>标题</dt><dd>## 标题</dd><dt>强调</dt><dd>**粗体** / *斜体*</dd><dt>链接</dt><dd>[文字](https://…)</dd><dt>图片</dt><dd>![说明](图片地址)</dd><dt>引用</dt><dd>&gt; 引用内容</dd><dt>清单</dt><dd>- [ ] 待办事项</dd><dt>代码</dt><dd>`行内` / ```代码块```</dd><dt>表格</dt><dd>| 标题 | 标题 |</dd><dt>附件</dt><dd>粘贴截图 / 拖入文件 / 📎</dd><dt>立即保存</dt><dd>Ctrl / ⌘ + S</dd></dl>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+(function () {
+  "use strict";
+  PortalLayout.mount({ active: "notebook", rail: false });
+  // 自动保存：输入后先写入本机草稿（localStorage），停止输入 AUTOSAVE_DELAY 毫秒后 PUT 到服务器；
+  // 保存成功且期间没有新输入才删除草稿，所以断网、登录过期或误关页面时修改都留在本机，下次打开自动恢复并同步。
+  var DRAFT_PREFIX = "nova.notebook.draft.v1.", ACTIVE_KEY = "notebook-active-note", AUTOSAVE_DELAY = 1200, RETRY_DELAY = 15000, JSON_HEADERS = { "Content-Type": "application/json" };
+  var notes = [], attachments = [], storage = null, drafts = {}, activeId = null, currentView = "active", tagFilter = "", editorTags = [];
+  var previewTimer = null, saveTimer = null, persistTimer = null, retryTimer = null, listTimer = null, flashTimer = null;
+  var inflight = {}, again = {}, syncError = {}, lastSaved = {}, restored = {}, flash = null, uploadText = "", uploadsActive = 0, conflictOpen = false, draftStoreFailed = false;
+  function $(id) { return document.getElementById(id); }
+  var list = $("noteList"), search = $("noteSearch"), title = $("noteTitle"), body = $("noteBody"), status = $("noteStatus"), preview = $("markdownPreview"), workspace = $("noteWorkspace"), toolbar = $("noteToolbar"), help = $("markdownHelp"), editor = $("noteEditor"), tagBox = $("noteTags"), tagInput = $("tagInput"), fileInput = $("fileInput"), attachBox = $("noteAttachments");
+  var tagOptions = document.createElement("datalist"); tagOptions.id = "tagOptions"; document.body.appendChild(tagOptions); tagInput.setAttribute("list", "tagOptions");
+
+  function request(url, options) {
+    return fetch(url, options).then(function (response) {
+      return response.json().then(function (data) { return data; }, function () { return null; }).then(function (data) {
+        if (!response.ok || !data) { var error = new Error((data && data.error) || (response.ok ? "服务器返回了非预期内容，登录可能已过期" : "请求失败（HTTP " + response.status + "）")); error.status = response.ok ? 0 : response.status; error.data = data || {}; throw error; }
+        return data;
+      });
+    });
+  }
+  function find(id) { return notes.find(function (note) { return note.id === id; }); }
+  function current() { return find(activeId); }
+  function replaceNote(saved) { var index = notes.findIndex(function (note) { return note.id === saved.id; }); if (index !== -1) notes[index] = saved; }
+  function dateText(value) { return value ? new Date(value).toLocaleString("zh-CN", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" }) : ""; }
+  function timeText(value) { return new Date(value).toLocaleTimeString("zh-CN", { hour:"2-digit", minute:"2-digit", second:"2-digit" }); }
+  function formatBytes(bytes) { var units = ["B", "KB", "MB", "GB"], value = Number(bytes) || 0, unit = 0; while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; } return (unit ? value.toFixed(value < 10 ? 1 : 0) : value) + " " + units[unit]; }
+  function setStatus(text, state) { status.textContent = text; status.dataset.state = state || ""; }
+  function setFlash(text, state) { flash = { text: text, state: state, until: Date.now() + 6000 }; clearTimeout(flashTimer); flashTimer = setTimeout(renderStatus, 6100); renderStatus(); }
+  function sameContent(a, b) { return a.title === b.title && a.body === b.body && (a.tags || []).join("\u0001") === (b.tags || []).join("\u0001"); }
+  function withDraft(note) { var draft = drafts[note.id]; return draft ? Object.assign({}, note, { title: draft.title.trim() || "未命名笔记", body: draft.body, tags: draft.tags }) : note; }
+  function remember(key, value) { try { if (value) localStorage.setItem(key, value); else localStorage.removeItem(key); } catch (_) {} }
+
+  // ---------- 本机草稿
+  function persistDraft(id) {
+    try { if (drafts[id]) localStorage.setItem(DRAFT_PREFIX + id, JSON.stringify(drafts[id])); else localStorage.removeItem(DRAFT_PREFIX + id); draftStoreFailed = false; }
+    catch (_) { draftStoreFailed = true; }
+  }
+  function loadDrafts() {
+    try {
+      for (var index = 0; index < localStorage.length; index += 1) {
+        var key = localStorage.key(index);
+        if (!key || key.indexOf(DRAFT_PREFIX) !== 0) continue;
+        var draft = JSON.parse(localStorage.getItem(key));
+        if (draft && typeof draft.body === "string" && typeof draft.title === "string") { draft.tags = Array.isArray(draft.tags) ? draft.tags : []; draft.rev = draft.rev || 1; drafts[key.slice(DRAFT_PREFIX.length)] = draft; }
+      }
+    } catch (_) { draftStoreFailed = true; }
+  }
+  function dropDraft(id) { delete drafts[id]; delete syncError[id]; persistDraft(id); }
+  function onEdit() {
+    var note = current(); if (!note) return;
+    var draft = drafts[note.id] || { base: note.updated_at, rev: 0 };
+    draft.title = title.value; draft.body = body.value; draft.tags = editorTags.slice(); draft.rev += 1; draft.at = Date.now();
+    drafts[note.id] = draft; delete restored[note.id];
+    if (syncError[note.id] && syncError[note.id].kind === "invalid") delete syncError[note.id];
+    clearTimeout(persistTimer); persistTimer = setTimeout(function () { persistDraft(note.id); }, 250);
+    clearTimeout(saveTimer); saveTimer = setTimeout(function () { syncNote(note.id); }, AUTOSAVE_DELAY);
+    renderStatus(); scheduleList();
+  }
+  function flushActive(keepalive) {
+    clearTimeout(persistTimer); clearTimeout(saveTimer);
+    if (activeId && drafts[activeId]) { persistDraft(activeId); syncNote(activeId, keepalive); }
+  }
+
+  // ---------- 同步到服务器
+  function syncNote(id, keepalive) {
+    var draft = drafts[id];
+    if (!draft || !find(id)) return Promise.resolve();
+    if (inflight[id]) { again[id] = true; return inflight[id]; }
+    if (syncError[id] && syncError[id].kind === "conflict") return Promise.resolve();
+    var rev = draft.rev, payload = JSON.stringify({ title: draft.title, body: draft.body, tags: draft.tags, base_updated_at: draft.base });
+    // 页面关闭时用 keepalive 让请求在卸载后继续发送；浏览器限制约 64KB，超出就依赖本机草稿兜底
+    var options = { method: "PUT", headers: JSON_HEADERS, body: payload, keepalive: !!keepalive && new Blob([payload]).size < 60000 };
+    inflight[id] = request("/api/notes/" + id, options).then(function (saved) {
+      delete syncError[id]; replaceNote(saved); lastSaved[id] = Date.now();
+      var latest = drafts[id];
+      if (latest && latest.rev === rev) dropDraft(id); else if (latest) { latest.base = saved.updated_at; persistDraft(id); }
+      if (id === activeId) renderHead();
+    }, function (error) {
+      if (error.status === 409 && error.data.note) { replaceNote(error.data.note); syncError[id] = { kind: "conflict" }; if (id === activeId) setTimeout(function () { resolveConflict(id); }, 0); }
+      else if (error.status === 404) { syncError[id] = { kind: "gone" }; if (id === activeId) setTimeout(function () { rescueDrafts([id]); }, 0); }
+      else if (error.status === 400) syncError[id] = { kind: "invalid", message: error.message };
+      else { syncError[id] = { kind: "offline", message: error.message }; scheduleRetry(); }
+    }).then(function () {
+      delete inflight[id]; renderStatus(); scheduleList();
+      if (again[id]) { delete again[id]; if (!syncError[id]) syncNote(id); }
+    });
+    renderStatus();
+    return inflight[id];
+  }
+  function syncAll() {
+    clearTimeout(retryTimer); retryTimer = null;
+    Object.keys(drafts).forEach(function (id) { var error = syncError[id]; if (find(id) && (!error || error.kind === "offline")) { delete syncError[id]; syncNote(id); } });
+  }
+  function scheduleRetry() { if (!retryTimer) retryTimer = setTimeout(syncAll, RETRY_DELAY); }
+  function resolveConflict(id) {
+    var draft = drafts[id], serverNote = find(id);
+    if (!draft || !serverNote || conflictOpen || id !== activeId) return;
+    conflictOpen = true;
+    // Esc / 点背景走不丢数据的「另存副本」
+    PortalDialog.show({
+      tone: "warn", icon: "🔀", title: "这篇笔记在别处改过了", cancelValue: "copy",
+      message: "《" + serverNote.title + "》在其他页面或设备上有更新（服务器版本 " + dateText(serverNote.updated_at) + "）。\n要保留哪一边？",
+      buttons: [
+        { label: "载入服务器版本，本页另存副本", value: "copy", kind: "ghost", "default": true },
+        { label: "用本页覆盖服务器", value: "overwrite", kind: "danger" }
+      ]
+    }).then(function (choice) {
+      conflictOpen = false; delete syncError[id];
+      draft = drafts[id]; serverNote = find(id);
+      if (!draft || !serverNote) return;
+      if (choice === "overwrite") { draft.base = serverNote.updated_at; persistDraft(id); syncNote(id); return; }
+      saveConflictCopy(id, draft);
+    });
+  }
+  function saveConflictCopy(id, draft) {
+    request("/api/notes", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ title: (draft.title.trim() || "未命名笔记").slice(0, 190) + "（冲突副本）", body: draft.body, tags: draft.tags }) }).then(function (copy) {
+      notes.unshift(copy); dropDraft(id);
+      if (activeId === id) { activeId = null; select(find(id)); }
+      setFlash("已载入服务器版本；本页内容另存为《" + copy.title + "》", "saved");
+    }, function (error) { syncError[id] = { kind: "conflict" }; setFlash("另存冲突副本失败：" + error.message + "（草稿仍保留在本机）", "error"); });
+  }
+  // 草稿对应的笔记在服务器上已不存在（通常是在其他设备删除了），询问是否另存为新笔记
+  function rescueDrafts(ids) {
+    ids = ids.filter(function (id) { return drafts[id]; }); if (!ids.length || conflictOpen) return;
+    conflictOpen = true;
+    // Esc / 点背景默认保留，避免误丢草稿
+    PortalDialog.show({
+      tone: "question", icon: "📝", title: "发现 " + ids.length + " 份没同步的草稿", cancelValue: true,
+      message: "它们对应的笔记已经不在服务器上了（可能在其他设备删掉了）：",
+      list: ids.map(function (id) { return drafts[id].title.trim() || "未命名笔记"; }),
+      buttons: [
+        { label: "丢弃这些草稿", value: false, kind: "ghost" },
+        { label: "另存为新笔记", value: true, kind: "primary", "default": true }
+      ]
+    }).then(function (keep) {
+      conflictOpen = false;
+      applyRescue(ids.filter(function (id) { return drafts[id]; }), keep);
+    });
+  }
+  function applyRescue(ids, keep) {
+    ids.forEach(function (id) {
+      var draft = drafts[id];
+      notes = notes.filter(function (note) { return note.id !== id; });
+      if (!keep) { dropDraft(id); return; }
+      request("/api/notes", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ title: draft.title, body: draft.body, tags: draft.tags }) }).then(function (note) {
+        notes.unshift(note); dropDraft(id); if (activeId === id || !activeId) { activeId = null; select(note); } else render();
+        setFlash("已把草稿另存为《" + note.title + "》", "saved");
+      }, function (error) { setFlash("恢复草稿失败：" + error.message, "error"); });
+    });
+    if (!keep && ids.indexOf(activeId) !== -1) { activeId = null; select(firstInView()); } else render();
+  }
+
+  // ---------- 状态栏
+  function renderStatus() {
+    var note = current();
+    if (uploadText) return setStatus(uploadText, "saving");
+    if (flash && flash.until > Date.now()) return setStatus(flash.text, flash.state);
+    if (!note) return setStatus(notes.length ? "从左侧选择一篇笔记" : "新建一篇笔记开始记录", "");
+    var id = note.id, error = syncError[id], draft = drafts[id];
+    if (error && error.kind === "offline") return setStatus("⚠ 无法连接服务器，修改已保存在本机草稿，恢复后自动同步（" + error.message + "）", "error");
+    if (error && error.kind === "conflict") return setStatus("⚠ 与其他页面或设备上的修改冲突，等待处理", "error");
+    if (error && error.kind === "gone") return setStatus("⚠ 服务器上已找不到这篇笔记，修改只保留在本机草稿", "error");
+    if (error && error.kind === "invalid") return setStatus("⚠ 保存失败：" + error.message, "error");
+    if (draftStoreFailed && draft) return setStatus("⚠ 浏览器本机草稿不可用（隐私模式或空间已满），请保持联网", "error");
+    if (inflight[id]) return setStatus("保存中…", "saving");
+    if (draft && restored[id]) return setStatus("已恢复本机未同步的草稿（" + dateText(restored[id]) + "），正在同步…", "dirty");
+    if (draft) return setStatus("编辑中 · 已暂存到本机，停止输入后自动保存", "dirty");
+    if (!navigator.onLine) return setStatus("当前离线 · 所有内容已保存", "saved");
+    return setStatus(lastSaved[id] ? "已自动保存 · " + timeText(lastSaved[id]) : "已同步到服务器", "saved");
+  }
+
+  // ---------- Markdown
+  function escapeHtml(value) { return String(value).replace(/[&<>"']/g, function (character) { return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[character]; }); }
+  // 传入的 url 已经过 escapeHtml，这里只做协议白名单，不再重复转义
+  function safeUrl(value) { var url = value.trim(); return /^(https?:\/\/|mailto:)/i.test(url) || /^\/api\/attachments\/[a-f0-9]{16}$/.test(url) ? url : "#"; }
+  function inlineMarkdown(value) {
+    var tokens = [];
+    function stash(html) { tokens.push(html); return "\u0000" + (tokens.length - 1) + "\u0000"; }
+    var text = String(value).replace(/`([^`\n]+)`/g, function (_, code) { return stash("<code>" + escapeHtml(code) + "</code>"); });
+    text = escapeHtml(text);
+    text = text.replace(/!\[([^\]]*)\]\(([^\s)]+)\)/g, function (match, alt, url) { var src = safeUrl(url); if (src === "#" || /^mailto:/i.test(src)) return match; return stash('<a href="' + src + '" target="_blank" rel="noopener noreferrer"><img src="' + src + '" alt="' + alt.replace(/\u0000\d+\u0000/g, "") + '" loading="lazy"></a>'); });
+    text = text.replace(/\[([^\]]+)\]\(([^\s)]+)\)/g, function (_, label, url) { return stash('<a href="' + safeUrl(url) + '" target="_blank" rel="noopener noreferrer">') + label + stash("</a>"); });
+    text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_\n]+)__/g, "<strong>$1</strong>").replace(/~~([^~\n]+)~~/g, "<del>$1</del>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^_])_([^_\n]+)_(?!_)/g, "$1<em>$2</em>");
+    return text.replace(/\u0000(\d+)\u0000/g, function (_, index) { return tokens[Number(index)] || ""; });
+  }
+  function isTableDivider(line) { return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line); }
+  function tableCells(line) { return line.trim().replace(/^\||\|$/g, "").split("|").map(function (cell) { return cell.trim(); }); }
+  function markdownToHtml(markdown) {
+    var lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n"), output = [], paragraph = [], listType = "", listItems = [], inCode = false, codeLang = "", codeLines = [];
+    function flushParagraph() { if (paragraph.length) { output.push("<p>" + paragraph.map(inlineMarkdown).join("<br>") + "</p>"); paragraph = []; } }
+    function flushList() { if (listItems.length) { var className = listType === "task" ? ' class="task-list"' : "", tag = listType === "ol" ? "ol" : "ul"; output.push("<" + tag + className + ">" + listItems.join("") + "</" + tag + ">"); listItems = []; listType = ""; } }
+    function flushAll() { flushParagraph(); flushList(); }
+    for (var index = 0; index < lines.length; index += 1) {
+      var line = lines[index], fence = line.match(/^\s*```\s*([\w+-]*)\s*$/);
+      if (fence) { if (inCode) { output.push('<pre' + (codeLang ? ' data-lang="' + escapeHtml(codeLang) + '"' : "") + '><code>' + escapeHtml(codeLines.join("\n")) + "</code></pre>"); inCode = false; codeLang = ""; codeLines = []; } else { flushAll(); inCode = true; codeLang = fence[1] || ""; } continue; }
+      if (inCode) { codeLines.push(line); continue; }
+      if (!line.trim()) { flushAll(); continue; }
+      if (index + 1 < lines.length && line.indexOf("|") !== -1 && isTableDivider(lines[index + 1])) { flushAll(); var heads = tableCells(line), rows = []; index += 2; while (index < lines.length && lines[index].indexOf("|") !== -1 && lines[index].trim()) { rows.push(tableCells(lines[index])); index += 1; } index -= 1; output.push("<table><thead><tr>" + heads.map(function (cell) { return "<th>" + inlineMarkdown(cell) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows.map(function (row) { return "<tr>" + heads.map(function (_, cellIndex) { return "<td>" + inlineMarkdown(row[cellIndex] || "") + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>"); continue; }
+      if (isTableDivider(line)) continue;
+      var heading = line.match(/^(#{1,6})\s+(.+)$/); if (heading) { flushAll(); var level = heading[1].length; output.push("<h" + level + ">" + inlineMarkdown(heading[2]) + "</h" + level + ">"); continue; }
+      if (/^\s*(---+|___+|\*\*\*+)\s*$/.test(line)) { flushAll(); output.push("<hr>"); continue; }
+      var quote = line.match(/^\s*>\s?(.*)$/); if (quote) { flushAll(); output.push("<blockquote><p>" + inlineMarkdown(quote[1]) + "</p></blockquote>"); continue; }
+      var task = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.*)$/); if (task) { flushParagraph(); if (listType && listType !== "task") flushList(); listType = "task"; listItems.push('<li class="task-item"><input type="checkbox" disabled' + (task[1].toLowerCase() === "x" ? " checked" : "") + "><span>" + inlineMarkdown(task[2]) + "</span></li>"); continue; }
+      var unordered = line.match(/^\s*[-*+]\s+(.*)$/); if (unordered) { flushParagraph(); if (listType && listType !== "ul") flushList(); listType = "ul"; listItems.push("<li>" + inlineMarkdown(unordered[1]) + "</li>"); continue; }
+      var ordered = line.match(/^\s*\d+[.)]\s+(.*)$/); if (ordered) { flushParagraph(); if (listType && listType !== "ol") flushList(); listType = "ol"; listItems.push("<li>" + inlineMarkdown(ordered[1]) + "</li>"); continue; }
+      flushList(); paragraph.push(line);
+    }
+    if (inCode) output.push("<pre><code>" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+    flushAll(); return output.join("\n");
+  }
+  function plainExcerpt(value) { return String(value || "").replace(/```[\s\S]*?```/g, "代码片段").replace(/!\[[^\]]*\]\([^)]*\)/g, " 图片 ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[#>*_~`|\[\]()!-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 86); }
+  function updatePreview() { var value = body.value; preview.innerHTML = value.trim() ? markdownToHtml(value) : '<div class="preview-empty"><span>◇</span><p>预览会在这里实时显示</p></div>'; var chars = Array.from(value).length, lines = value ? value.split(/\r\n?|\n/).length : 0; $("editorStats").textContent = chars + " 字 · " + lines + " 行"; }
+  function schedulePreview() { clearTimeout(previewTimer); previewTimer = setTimeout(updatePreview, 45); }
+
+  // ---------- 侧栏：视图、标签筛选、置顶分组
+  function inView(note) { return !!note.archived === (currentView === "archived"); }
+  function firstInView() { return sortNotes(notes.filter(inView))[0] || null; }
+  function sortNotes(items) { return items.slice().sort(function (a, b) { if (currentView === "active" && !!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1; return (b.updated_at || "").localeCompare(a.updated_at || ""); }); }
+  function scheduleList() { if (!listTimer) listTimer = setTimeout(function () { listTimer = null; render(); }, 300); }
+  function tagCounts(items) { var counts = {}; items.forEach(function (note) { (note.tags || []).forEach(function (tag) { counts[tag] = (counts[tag] || 0) + 1; }); }); return counts; }
+  function render() {
+    var q = search.value.trim().toLowerCase(), viewNotes = notes.filter(inView).map(withDraft), counts = tagCounts(viewNotes), allCounts = tagCounts(notes.map(withDraft));
+    $("activeCount").textContent = notes.filter(function (note) { return !note.archived; }).length;
+    $("archivedCount").textContent = notes.filter(function (note) { return note.archived; }).length;
+    if (tagFilter && !counts[tagFilter]) tagFilter = "";
+    var filterBox = $("tagFilter"); filterBox.innerHTML = "";
+    Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b, "zh-CN"); }).forEach(function (tag) {
+      var chip = document.createElement("button"); chip.type = "button"; chip.className = "tag-chip" + (tag === tagFilter ? " active" : ""); chip.textContent = "#" + tag + " "; var count = document.createElement("small"); count.textContent = counts[tag]; chip.appendChild(count); chip.title = tag === tagFilter ? "取消筛选" : "只看此标签";
+      chip.addEventListener("click", function () { tagFilter = tagFilter === tag ? "" : tag; render(); }); filterBox.appendChild(chip);
+    });
+    tagOptions.innerHTML = ""; Object.keys(allCounts).sort().forEach(function (tag) { var option = document.createElement("option"); option.value = tag; tagOptions.appendChild(option); });
+    var shown = sortNotes(viewNotes.filter(function (note) { return (!tagFilter || note.tags.indexOf(tagFilter) !== -1) && (!q || (note.title + " " + note.body + " #" + note.tags.join(" #")).toLowerCase().indexOf(q) !== -1); }));
+    $("noteCount").textContent = shown.length; list.innerHTML = "";
+    if (!shown.length) list.innerHTML = '<div class="note-empty"><div><span>◇</span>' + (q || tagFilter ? "没有匹配的笔记" : currentView === "archived" ? "没有归档的笔记" : "还没有笔记") + "</div></div>";
+    var grouped = currentView === "active" && shown.some(function (note) { return note.pinned; }) && shown.some(function (note) { return !note.pinned; }), lastPinned = null;
+    shown.forEach(function (note) {
+      if (grouped && lastPinned !== !!note.pinned) { lastPinned = !!note.pinned; var label = document.createElement("div"); label.className = "note-group-label"; label.textContent = note.pinned ? "置顶" : "笔记"; list.appendChild(label); }
+      var button = document.createElement("button"); button.type = "button"; button.className = "note-item" + (note.id === activeId ? " active" : "");
+      var strong = document.createElement("strong"), excerpt = document.createElement("p"), small = document.createElement("small");
+      if (note.pinned && currentView === "active") { var pin = document.createElement("span"); pin.className = "pin-mark"; pin.textContent = "📌"; strong.appendChild(pin); }
+      strong.appendChild(document.createTextNode(note.title || "未命名笔记")); excerpt.textContent = plainExcerpt(note.body) || "空白笔记";
+      button.appendChild(strong); button.appendChild(excerpt);
+      if (note.tags.length) { var tags = document.createElement("div"); tags.className = "note-item-tags"; note.tags.slice(0, 3).forEach(function (tag) { var chip = document.createElement("span"); chip.className = "tag-chip"; chip.textContent = "#" + tag; tags.appendChild(chip); }); button.appendChild(tags); }
+      small.textContent = dateText(note.updated_at);
+      if (drafts[note.id]) { var dot = document.createElement("span"); dot.className = "unsynced"; dot.title = "有尚未同步到服务器的修改"; small.appendChild(dot); }
+      button.appendChild(small);
+      button.addEventListener("click", function () { if (note.id !== activeId) select(find(note.id)); });
+      list.appendChild(button);
+    });
+  }
+  function setView(view) { currentView = view; tagFilter = ""; document.querySelectorAll(".note-view").forEach(function (button) { button.classList.toggle("active", button.dataset.view === view); }); render(); }
+
+  // ---------- 编辑区
+  function renderHead() {
+    var note = current();
+    $("noteUpdated").textContent = note ? "更新于 " + dateText(note.updated_at) : "尚未选择笔记";
+    $("archivedBadge").hidden = !(note && note.archived);
+    var pin = $("notePin"), archive = $("noteArchive");
+    pin.setAttribute("aria-pressed", String(!!(note && note.pinned))); pin.title = note && note.pinned ? "取消置顶" : "置顶";
+    archive.setAttribute("aria-pressed", String(!!(note && note.archived))); archive.title = note && note.archived ? "取消归档" : "归档"; archive.setAttribute("aria-label", archive.title); pin.setAttribute("aria-label", pin.title);
+  }
+  function select(note) {
+    flushActive();
+    activeId = note ? note.id : null; remember(ACTIVE_KEY, activeId);
+    var draft = note && drafts[note.id];
+    if (draft && sameContent(draft, note)) { dropDraft(note.id); draft = null; }
+    var content = draft || note;
+    title.value = note ? content.title : ""; body.value = note ? content.body : ""; editorTags = note ? (content.tags || []).slice() : [];
+    title.disabled = body.disabled = tagInput.disabled = !note;
+    toolbar.querySelectorAll("button[data-format]").forEach(function (button) { button.disabled = !note; });
+    ["notePin", "noteArchive", "noteDelete"].forEach(function (id) { $(id).disabled = !note; });
+    renderHead(); renderTags(); renderAttachments(); updatePreview(); render();
+    if (draft) {
+      restored[note.id] = draft.at || Date.now();
+      if (syncError[note.id] && syncError[note.id].kind === "conflict") setTimeout(function () { resolveConflict(note.id); }, 0);
+      else { delete syncError[note.id]; syncNote(note.id); }
+    }
+    renderStatus();
+  }
+
+  // ---------- 标签
+  function renderTags() {
+    tagBox.querySelectorAll(".tag-chip").forEach(function (chip) { chip.remove(); });
+    editorTags.forEach(function (tag, index) {
+      var chip = document.createElement("span"), remove = document.createElement("button"); chip.className = "tag-chip"; chip.textContent = "#" + tag;
+      remove.type = "button"; remove.textContent = "×"; remove.title = "移除标签"; remove.setAttribute("aria-label", "移除标签 " + tag);
+      remove.addEventListener("click", function () { editorTags.splice(index, 1); renderTags(); onEdit(); });
+      chip.appendChild(remove); tagBox.insertBefore(chip, tagInput);
+    });
+  }
+  function addTag(raw) {
+    var tag = String(raw).replace(/\s+/g, " ").trim().replace(/^#+/, "").trim().slice(0, 30);
+    if (!tag || !current() || editorTags.some(function (item) { return item.toLowerCase() === tag.toLowerCase(); })) return;
+    if (editorTags.length >= 20) { setFlash("每篇笔记最多 20 个标签", "error"); return; }
+    editorTags.push(tag); renderTags(); onEdit();
+  }
+  tagInput.addEventListener("keydown", function (event) {
+    if (event.isComposing || event.keyCode === 229) return;
+    if (event.key === "Enter" || event.key === ",") { event.preventDefault(); addTag(tagInput.value); tagInput.value = ""; }
+    else if (event.key === "Backspace" && !tagInput.value && editorTags.length) { editorTags.pop(); renderTags(); onEdit(); }
+  });
+  tagInput.addEventListener("input", function () { if (/[,，]/.test(tagInput.value)) { tagInput.value.split(/[,，]/).slice(0, -1).forEach(addTag); tagInput.value = tagInput.value.split(/[,，]/).pop(); } });
+  tagInput.addEventListener("change", function () { if (tagInput.value.trim()) { addTag(tagInput.value); tagInput.value = ""; } });
+
+  // ---------- 置顶 / 归档（只改标记，不影响正文与 updated_at）
+  function toggleFlag(key) {
+    var note = current(); if (!note) return;
+    var patch = {}; patch[key] = !note[key];
+    request("/api/notes/" + note.id, { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(patch) }).then(function (saved) {
+      replaceNote(saved); renderHead(); render();
+      if (key === "archived") setFlash(saved.archived ? "已归档，可在左侧“归档”中找到；再次点击 🗄 可取消" : "已移回笔记列表", "saved");
+      else setFlash(saved.pinned ? "已置顶" : "已取消置顶", "saved");
+    }, function (error) { setFlash((key === "archived" ? "归档" : "置顶") + "失败：" + error.message, "error"); });
+  }
+
+  // ---------- 图片与附件：粘贴截图、拖入文件、📎 选择；上传前先按服务器返回的配额预检查
+  function isImage(mime) { return /^image\/(png|jpeg|gif|webp|avif|bmp)$/.test(mime || ""); }
+  function attachmentMarkdown(item) { var label = item.name.replace(/[\[\]\\]/g, ""); return isImage(item.mime) ? "![" + label + "](" + item.url + ")" : "[📎 " + label + "](" + item.url + ")"; }
+  function insertAtCursor(text) { var start = body.selectionStart, end = body.selectionEnd; body.setRangeText(text, start, end, "end"); body.focus(); onEdit(); schedulePreview(); }
+  function renderStorage() {
+    var box = $("storageUsage");
+    if (!storage) { box.textContent = ""; return; }
+    var ratio = storage.quota ? storage.used / storage.quota : 0;
+    box.textContent = "附件 " + formatBytes(storage.used) + " / " + formatBytes(storage.quota);
+    box.dataset.level = ratio >= 0.98 ? "full" : ratio >= 0.85 ? "warn" : "";
+    box.title = "附件已用 / 配额（单个文件上限 " + formatBytes(storage.max_file) + "）";
+  }
+  function renderAttachments() {
+    var note = current(), items = note ? attachments.filter(function (item) { return item.note_id === note.id; }) : [];
+    attachBox.hidden = !items.length; attachBox.innerHTML = "";
+    if (items.length) { var label = document.createElement("span"); label.className = "attach-label"; label.textContent = "附件 " + items.length; attachBox.appendChild(label); }
+    items.forEach(function (item) {
+      var row = document.createElement("div"), thumb = document.createElement("span"), link = document.createElement("a"), size = document.createElement("span"), insert = document.createElement("button"), remove = document.createElement("button");
+      row.className = "attach-item"; thumb.className = "attach-thumb";
+      if (isImage(item.mime)) { var image = document.createElement("img"); image.src = item.url; image.alt = ""; image.loading = "lazy"; thumb.appendChild(image); } else thumb.textContent = "📄";
+      link.className = "attach-name"; link.href = item.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = item.name; link.title = item.name;
+      size.className = "attach-size"; size.textContent = formatBytes(item.size);
+      insert.type = "button"; insert.textContent = "插入"; insert.title = "在光标处插入引用"; insert.addEventListener("click", function () { insertAtCursor(attachmentMarkdown(item)); });
+      remove.type = "button"; remove.className = "danger"; remove.textContent = "×"; remove.title = "删除附件"; remove.setAttribute("aria-label", "删除附件 " + item.name); remove.addEventListener("click", function () { deleteAttachment(item); });
+      [thumb, link, size, insert, remove].forEach(function (node) { row.appendChild(node); }); attachBox.appendChild(row);
+    });
+    renderStorage();
+  }
+  function deleteAttachment(item) {
+    PortalDialog.confirm({ danger: true, title: "删除附件？", message: "《" + item.name + "》\n笔记里引用它的图片或链接会一起移除，删了就找不回来啦。", confirmText: "删除" }).then(function (ok) {
+      if (ok) removeAttachment(item);
+    });
+  }
+  function removeAttachment(item) {
+    request(item.url, { method: "DELETE" }).then(function (data) {
+      attachments = attachments.filter(function (other) { return other.id !== item.id; }); storage = data.storage || storage;
+      var pattern = new RegExp("!?\\[[^\\]\\n]*\\]\\(" + item.url.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&") + "\\)\\n?", "g");
+      if (item.note_id === activeId && pattern.test(body.value)) { body.value = body.value.replace(pattern, ""); onEdit(); updatePreview(); }
+      renderAttachments(); setFlash("已删除附件《" + item.name + "》", "saved");
+    }, function (error) { setFlash("删除附件失败：" + error.message, "error"); });
+  }
+  function screenshotName(file) {
+    var now = new Date(), pad = function (value) { return String(value).padStart(2, "0"); }, ext = ((file.type || "").split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "");
+    return "截图-" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()) + "." + ext;
+  }
+  function uploadOne(noteId, file, name) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/notes/" + noteId + "/attachments");
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
+      xhr.upload.onprogress = function (event) { if (event.lengthComputable) { uploadText = "上传中：" + name + " " + Math.round(event.loaded * 100 / event.total) + "%" + (uploadsActive > 1 ? "（共 " + uploadsActive + " 个）" : ""); renderStatus(); } };
+      xhr.onload = function () { var data = null; try { data = JSON.parse(xhr.responseText); } catch (_) {} if (xhr.status >= 200 && xhr.status < 300 && data && data.attachment) resolve(data); else reject(new Error((data && data.error) || (xhr.status ? "HTTP " + xhr.status : "登录可能已过期"))); };
+      xhr.onerror = function () { reject(new Error("网络错误")); };
+      xhr.send(file);
+    });
+  }
+  // 上传完成后把占位符换成真正的 Markdown；用户已切到别的笔记时改写那篇笔记的草稿
+  function replacePlaceholder(noteId, placeholder, text) {
+    if (noteId === activeId) {
+      var index = body.value.indexOf(placeholder); if (index === -1) return;
+      // 手动平移光标：setRangeText 的 "preserve" 会把紧贴占位符的光标变成选中新文本，下一次粘贴就会把它覆盖
+      var end = index + placeholder.length, delta = text.length - placeholder.length, selStart = body.selectionStart, selEnd = body.selectionEnd;
+      function shift(position) { return position >= end ? position + delta : position > index ? index + text.length : position; }
+      body.setRangeText(text, index, end); body.setSelectionRange(shift(selStart), shift(selEnd)); onEdit(); schedulePreview(); return;
+    }
+    var note = find(noteId); if (!note) return;
+    var draft = drafts[noteId] || { base: note.updated_at, rev: 0, title: note.title, body: note.body, tags: note.tags.slice() };
+    if (draft.body.indexOf(placeholder) === -1) return;
+    draft.body = draft.body.replace(placeholder, function () { return text; }); draft.rev += 1; draft.at = Date.now(); drafts[noteId] = draft; persistDraft(noteId); syncNote(noteId); scheduleList();
+  }
+  function uploadFiles(files) {
+    var note = current(); files = Array.from(files || []).filter(Boolean);
+    if (!files.length) return;
+    if (!note) { setFlash("请先选择或新建一篇笔记", "error"); return; }
+    var reserved = 0;
+    files.forEach(function (file, index) {
+      var name = file.name && !/^image\.\w+$/i.test(file.name) ? file.name : screenshotName(file);
+      if (!file.size) { setFlash("《" + name + "》是空文件，未上传", "error"); return; }
+      if (storage && file.size > storage.max_file) { setFlash("《" + name + "》超过单个文件上限 " + formatBytes(storage.max_file) + "，未上传", "error"); return; }
+      if (storage && storage.used + reserved + file.size > storage.quota) { setFlash("附件空间不足（已用 " + formatBytes(storage.used) + " / " + formatBytes(storage.quota) + "），《" + name + "》未上传", "error"); return; }
+      reserved += file.size;
+      var placeholder = "![⏳ 上传中 " + name.replace(/[\[\]\\]/g, "") + " " + Math.random().toString(36).slice(2, 7) + "]()";
+      // 图片/附件独占一行
+      var before = body.value.slice(0, body.selectionStart), after = body.value.slice(body.selectionEnd);
+      insertAtCursor((before && !/\n$/.test(before) ? "\n" : "") + placeholder + ((after && !/^\n/.test(after)) || index < files.length - 1 ? "\n" : ""));
+      uploadsActive += 1; uploadText = "上传中：" + name + (uploadsActive > 1 ? "（共 " + uploadsActive + " 个）" : ""); renderStatus();
+      uploadOne(note.id, file, name).then(function (data) {
+        attachments.push(data.attachment); storage = data.storage || storage;
+        replacePlaceholder(note.id, placeholder, attachmentMarkdown(data.attachment)); renderAttachments();
+      }, function (error) {
+        replacePlaceholder(note.id, placeholder, ""); setFlash("上传《" + name + "》失败：" + error.message, "error");
+      }).then(function () { uploadsActive -= 1; if (!uploadsActive) uploadText = ""; renderStatus(); });
+    });
+  }
+  body.addEventListener("paste", function (event) {
+    var data = event.clipboardData; if (!data) return;
+    var files = Array.from(data.items || []).filter(function (item) { return item.kind === "file"; }).map(function (item) { return item.getAsFile(); }).filter(Boolean);
+    if (!files.length) return;
+    // Office 等复制表格/文字时会顺带一张渲染图，此时仍按文本粘贴
+    if (data.getData("text/plain") && files.every(function (file) { return /^image\.\w+$/i.test(file.name || "image.png"); })) return;
+    event.preventDefault(); uploadFiles(files);
+  });
+  var dragDepth = 0;
+  function hasFiles(event) { return !!event.dataTransfer && Array.from(event.dataTransfer.types || []).indexOf("Files") !== -1; }
+  editor.addEventListener("dragenter", function (event) { if (!hasFiles(event) || !current()) return; event.preventDefault(); dragDepth += 1; editor.classList.add("dragging"); });
+  editor.addEventListener("dragover", function (event) { if (!hasFiles(event) || !current()) return; event.preventDefault(); event.dataTransfer.dropEffect = "copy"; });
+  editor.addEventListener("dragleave", function (event) { if (!hasFiles(event)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) editor.classList.remove("dragging"); });
+  editor.addEventListener("drop", function (event) { if (!hasFiles(event)) return; event.preventDefault(); dragDepth = 0; editor.classList.remove("dragging"); uploadFiles(event.dataTransfer.files); });
+  // 拖到编辑区以外时阻止浏览器直接打开文件、离开页面
+  window.addEventListener("dragover", function (event) { if (hasFiles(event)) event.preventDefault(); });
+  window.addEventListener("drop", function (event) { if (hasFiles(event)) event.preventDefault(); });
+  fileInput.addEventListener("change", function () { uploadFiles(fileInput.files); fileInput.value = ""; });
+
+  // ---------- 格式工具栏与快捷键
+  function replaceSelection(before, after, fallback) { var start = body.selectionStart, end = body.selectionEnd, chosen = body.value.slice(start, end) || fallback; body.setRangeText(before + chosen + after, start, end, "end"); body.selectionStart = start + before.length; body.selectionEnd = start + before.length + chosen.length; body.focus(); onEdit(); schedulePreview(); }
+  function prefixLines(prefix) { var start = body.selectionStart, end = body.selectionEnd, lineStart = body.value.lastIndexOf("\n", start - 1) + 1, lineEnd = body.value.indexOf("\n", end); if (lineEnd === -1) lineEnd = body.value.length; var selected = body.value.slice(lineStart, lineEnd), changed = selected.split("\n").map(function (line, index) { return (typeof prefix === "function" ? prefix(index) : prefix) + line; }).join("\n"); body.setRangeText(changed, lineStart, lineEnd, "select"); body.focus(); onEdit(); schedulePreview(); }
+  function applyFormat(format) {
+    var actions = { heading:function () { prefixLines("## "); }, bold:function () { replaceSelection("**", "**", "粗体文字"); }, italic:function () { replaceSelection("*", "*", "斜体文字"); }, strike:function () { replaceSelection("~~", "~~", "删除线文字"); }, code:function () { replaceSelection("`", "`", "code"); }, link:function () { replaceSelection("[", "](https://)", "链接文字"); }, quote:function () { prefixLines("> "); }, bullet:function () { prefixLines("- "); }, number:function () { prefixLines(function (index) { return (index + 1) + ". "; }); }, task:function () { prefixLines("- [ ] "); }, codeblock:function () { replaceSelection("```\n", "\n```", "code"); }, table:function () { replaceSelection("", "", "| 项目 | 内容 |\n| --- | --- |\n| 示例 | 文字 |"); }, rule:function () { replaceSelection("\n\n---\n\n", "", ""); }, attach:function () { fileInput.click(); } };
+    if (actions[format]) actions[format]();
+  }
+  function saveNow() { if (!current()) return; if (drafts[activeId]) flushActive(); else setFlash("已是最新版本，无需保存", "saved"); }
+  function setMode(mode) { if (mode === "split" && matchMedia("(max-width: 900px)").matches) mode = "edit"; workspace.dataset.mode = mode; document.querySelectorAll(".mode-button").forEach(function (button) { button.classList.toggle("active", button.dataset.mode === mode); }); remember("notebook-view-mode", mode); if (mode !== "edit") updatePreview(); }
+  $("noteNew").addEventListener("click", function () {
+    request("/api/notes", { method:"POST", headers:JSON_HEADERS, body:JSON.stringify({ title:"未命名笔记", body:"", tags: tagFilter ? [tagFilter] : [] }) }).then(function (note) {
+      notes.unshift(note); if (currentView !== "active") { var keep = tagFilter; setView("active"); tagFilter = keep; } select(note); title.select();
+    }).catch(function (error) { setFlash("新建失败：" + error.message, "error"); });
+  });
+  $("notePin").addEventListener("click", function () { toggleFlag("pinned"); });
+  $("noteArchive").addEventListener("click", function () { toggleFlag("archived"); });
+  $("noteDelete").addEventListener("click", function () {
+    var note = current(); if (!note) return;
+    var count = attachments.filter(function (item) { return item.note_id === note.id; }).length;
+    PortalDialog.show({
+      tone: "danger", title: "删除《" + (title.value.trim() || note.title) + "》？", cancelValue: null, focus: "cancel",
+      message: (count ? "它的 " + count + " 个附件也会一起删除，" : "") + "删了就找不回来啦。\n不想看到但想留着的话，可以归档。",
+      buttons: note.archived
+        ? [{ label: "再想想", value: null, kind: "ghost" }, { label: "删除", value: "delete", kind: "danger" }]
+        : [{ label: "再想想", value: null, kind: "ghost" }, { label: "🗄 改为归档", value: "archive", kind: "primary" }, { label: "删除", value: "delete", kind: "danger" }]
+    }).then(function (choice) {
+      if (choice === "archive") { if (current() && current().id === note.id) toggleFlag("archived"); return; }
+      if (choice === "delete") deleteNote(note);
+    });
+  });
+  function deleteNote(note) {
+    request("/api/notes/" + note.id, { method:"DELETE" }).then(function (data) {
+      clearTimeout(saveTimer); clearTimeout(persistTimer); dropDraft(note.id);
+      notes = notes.filter(function (item) { return item.id !== note.id; }); attachments = attachments.filter(function (item) { return item.note_id !== note.id; }); storage = data.storage || storage;
+      activeId = null; select(firstInView());
+    }).catch(function (error) { setFlash("删除失败：" + error.message, "error"); });
+  }
+  title.addEventListener("input", onEdit);
+  body.addEventListener("input", function () { onEdit(); schedulePreview(); });
+  body.addEventListener("keydown", function (event) { var modifier = event.ctrlKey || event.metaKey; if (modifier && event.key.toLowerCase() === "s") { event.preventDefault(); saveNow(); return; } if (modifier && event.key.toLowerCase() === "b") { event.preventDefault(); applyFormat("bold"); return; } if (modifier && event.key.toLowerCase() === "i") { event.preventDefault(); applyFormat("italic"); return; } if (event.key === "Tab") { event.preventDefault(); replaceSelection("  ", "", ""); return; } if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { var start = body.selectionStart, lineStart = body.value.lastIndexOf("\n", start - 1) + 1, line = body.value.slice(lineStart, start), match = line.match(/^(\s*)([-*+] |\d+[.)] |- \[[ xX]\] )(.*)$/); if (match) { event.preventDefault(); if (!match[3]) body.setRangeText("", lineStart, start, "end"); else { var marker = /^\d/.test(match[2]) ? (parseInt(match[2], 10) + 1) + ". " : match[2].replace(/- \[[xX]\] /, "- [ ] "); body.setRangeText("\n" + match[1] + marker, start, body.selectionEnd, "end"); } onEdit(); schedulePreview(); } } });
+  document.addEventListener("keydown", function (event) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && event.target !== body) { event.preventDefault(); saveNow(); } });
+  toolbar.addEventListener("click", function (event) { var formatButton = event.target.closest("[data-format]"), modeButton = event.target.closest("[data-mode]"); if (formatButton) applyFormat(formatButton.dataset.format); if (modeButton) setMode(modeButton.dataset.mode); });
+  document.querySelectorAll(".note-view").forEach(function (button) { button.addEventListener("click", function () { setView(button.dataset.view); }); });
+  $("helpToggle").addEventListener("click", function () { help.hidden = !help.hidden; this.setAttribute("aria-expanded", String(!help.hidden)); });
+  $("helpClose").addEventListener("click", function () { help.hidden = true; $("helpToggle").setAttribute("aria-expanded", "false"); });
+  search.addEventListener("input", render);
+
+  // ---------- 离开页面 / 网络变化
+  window.addEventListener("pagehide", function () { flushActive(true); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") flushActive(true); });
+  window.addEventListener("beforeunload", function (event) {
+    flushActive(true);
+    // 本机草稿能兜底时不打扰；只有正在上传或浏览器存不了草稿时才提示
+    if (uploadsActive || (draftStoreFailed && Object.keys(drafts).length)) { event.preventDefault(); event.returnValue = ""; }
+  });
+  window.addEventListener("online", function () { syncAll(); renderStatus(); });
+  window.addEventListener("offline", renderStatus);
+
+  function load() {
+    request("/api/notes").then(function (data) {
+      notes = data.notes || []; attachments = data.attachments || []; storage = data.storage || null;
+      loadDrafts();
+      var lastId = null; try { lastId = localStorage.getItem(ACTIVE_KEY); } catch (_) {}
+      var last = find(lastId);
+      if (last && last.archived) setView("archived");
+      select(last || firstInView());
+      Object.keys(drafts).forEach(function (id) { if (find(id) && id !== activeId) syncNote(id); });
+      var orphans = Object.keys(drafts).filter(function (id) { return !find(id); });
+      if (orphans.length) setTimeout(function () { rescueDrafts(orphans); }, 300);
+    }).catch(function (error) { setStatus("载入失败：" + error.message + "（本机草稿仍保留，刷新重试）", "error"); });
+  }
+  var savedMode = "split"; try { savedMode = localStorage.getItem("notebook-view-mode") || "split"; } catch (_) {} setMode(savedMode); load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# 个人数据与凭据：绝不提交
+data/
+config/*
+!config/*.example
+
+# 运行产物与临时文件
+__pycache__/
+*.pyc
+*.tmp
+*.bak*
+*.old*
+*.orig*

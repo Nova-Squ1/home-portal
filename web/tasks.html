@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasks · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <style>
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+    .chip {
+      border: 1px solid var(--line-strong); background: rgba(255,255,255,.7);
+      border-radius: 999px; padding: 3px 13px; font-size: 12.5px; cursor: pointer;
+      color: var(--ink-2);
+    }
+    .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .group-head {
+      margin: 18px 2px 6px; font-size: 12px; font-weight: 600;
+      color: var(--ink-2); display: flex; align-items: center; gap: 8px;
+    }
+    .group-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+    .group-head .n { color: var(--ink-3); font-weight: 400; }
+    .search-box {
+      flex: 1; min-width: 180px; border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm); padding: 4px 10px; font-size: 13px;
+      background: rgba(255,255,255,.7);
+    }
+    .lanes { display:grid; grid-template-columns:1fr 180px; gap:12px; margin:14px 0; }
+    .lane { border:1px dashed var(--line-strong); border-radius:var(--radius-lg);
+      background:rgba(255,255,255,.55); padding:12px 14px; min-height:74px; }
+    .lane.dragover { border-color:var(--accent); background:var(--accent-soft); }
+    .lane-title { display:flex; align-items:center; justify-content:space-between;
+      font-size:13px; font-weight:600; margin-bottom:5px; }
+    .archive-lane { cursor:pointer; display:grid; place-items:center; text-align:center; }
+    .archive-lane .lane-title { display:block; margin:0; }
+    .archive-count { display:block; color:var(--ink-3); font-size:12px; margin-top:5px; }
+    .drag-task { cursor:grab; }
+    .drag-task:active { cursor:grabbing; }
+    .modal-backdrop { position:fixed; inset:0; z-index:1000; display:none;
+      place-items:center; padding:20px; background:rgba(20,24,34,.42); backdrop-filter:blur(6px); }
+    .modal-backdrop.show { display:grid; }
+    .modal { width:min(760px,100%); max-height:80vh; overflow:auto; border-radius:14px;
+      border:1px solid rgba(255,255,255,.5); background:rgba(255,255,255,.9);
+      box-shadow:0 24px 70px rgba(0,0,0,.28); padding:16px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .modal-head h2 { margin:0; font-size:17px; }
+    .modal-close, .task-action { border:0; background:transparent; cursor:pointer; color:var(--ink-2); }
+    .task-action { font-size:11.5px; color:var(--accent-ink); white-space:nowrap; }
+    @media (max-width:700px) { .lanes { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Nova Workspace</span><span>Workspace</span><span>Tasks</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji">✅</div>
+        <div class="page-head-text">
+          <h1 class="page-title">Tasks</h1>
+          <div class="page-meta">
+            <span>本地任务与 Calendar 联动；拖到主页或归档栏调整状态；🎓 项收录 <span data-site="canvas.name">Canvas</span> <strong>所有学期</strong>作业</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="filters">
+        <input type="text" id="q" class="search-box" placeholder="搜索任务标题 / 课程…">
+        <button class="chip on" data-f="open">未完成</button>
+        <button class="chip" data-f="all">全部</button>
+        <button class="chip" data-f="local">仅本地</button>
+        <button class="chip" data-f="canvas">仅 Canvas</button>
+        <button class="chip" data-f="overdue">逾期</button>
+      </div>
+
+      <div class="lanes">
+        <section class="lane" id="homeLane" data-drop="home">
+          <div class="lane-title"><span>🏠 主页</span><span class="task-count" id="homeCount"></span></div>
+          <div id="homeList"></div>
+          <form class="task-add" id="homeForm">
+            <button class="plus-btn" type="submit">＋</button>
+            <input type="text" id="homeInput" placeholder="添加到主页…" maxlength="120">
+          </form>
+        </section>
+        <section class="lane archive-lane" id="archiveLane" data-drop="archive" role="button" tabindex="0">
+          <div class="lane-title">🗄️ 归档<span class="archive-count" id="archiveCount">0 项 · 点击查看</span></div>
+        </section>
+      </div>
+
+      <div id="updated" style="font-size:11.5px;color:var(--ink-3);margin:2px 2px 0"></div>
+      <div class="card" style="margin-top:10px">
+        <div id="list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="archiveModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="archiveTitle">
+    <div class="modal-head"><h2 id="archiveTitle">归档任务</h2><button class="modal-close" id="archiveClose" title="关闭">✕</button></div>
+    <div id="archiveList"></div>
+  </div>
+</div>
+
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+(function () {
+  PortalLayout.mount({ active: "tasks", rail: false });
+
+  var filter = "open";
+  var query = "";
+  var listEl = document.getElementById("list");
+  var homeListEl = document.getElementById("homeList");
+  var archiveListEl = document.getElementById("archiveList");
+  var draggedKey = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function todayKey() { return PortalTasks.todayKey(); }
+
+  function localRows() {
+    var tk = todayKey();
+    return PortalTasks.load().map(function (t) {
+      var key = "local:" + t.id;
+      return {
+        source: "local", key: key, id: t.id, text: t.text, done: t.done,
+        archived: PortalTasks.archived(key, t.done, t.archived),
+        home: PortalTasks.onHome(key, t.date, t.done, t.archived),
+        date: t.date, overdue: !!(t.date && t.date < tk && !t.done), _date: t.date
+      };
+    });
+  }
+
+  function canvasRows() {
+    var tk = todayKey();
+    return (PortalCanvas.cache().tasks || []).map(function (t) {
+      var isOverdue = t.due_local_date && t.due_local_date < tk && !t.submitted &&
+        (t.kind === "missing" || t.kind === "todo" ||
+         (t.kind === "planner" && t.plannable_type === "assignment") ||
+         t.kind === "assignment");
+      return {
+        source: "canvas", key: "canvas:" + t.id, t: t, text: t.title, done: !!t.submitted,
+        archived: PortalTasks.archived("canvas:" + t.id, t.submitted, false),
+        home: PortalTasks.onHome("canvas:" + t.id, t.due_local_date, t.submitted, false),
+        course: t.course, url: t.url || PortalSite.get("canvas.base_url", "#"),
+        label: PortalCanvas.kindLabel(t),
+        dueLocal: t.due_local_date,
+        dueText: t.due_local_date ? PortalCanvas.timeLabel(t) : "",
+        overdue: isOverdue,
+        _date: t.due_local_date || "9999-99-99"
+      };
+    });
+  }
+
+  function passes(r) {
+    if (query) {
+      var hay = (r.text + " " + (r.course || "")).toLowerCase();
+      if (hay.indexOf(query) === -1) return false;
+      if (r.archived) return true;
+    }
+    // 归档只在搜索结果或归档弹窗中出现。
+    if (r.archived && !query) return false;
+    if (!query && r.home) return false;
+    if (filter === "open" && (r.done || r.archived)) return false;
+    if (filter === "local" && r.source !== "local") return false;
+    if (filter === "canvas" && r.source !== "canvas") return false;
+    if (filter === "overdue" && !r.overdue) return false;
+    return true;
+  }
+
+  function canvasNode(r) {
+    var row = document.createElement("div");
+    row.className = "task-row canvas drag-task" + (r.overdue ? " overdue" : "") + (r.done ? " done" : "");
+    row.draggable = true; row.dataset.key = r.key;
+    var link = document.createElement("a");
+    link.className = "task-link";
+    link.href = r.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+    var tagCls = "oc-tag" + (r.overdue ? " missing" : "")
+      + (r.t.plannable_type === "announcement" ? " announcement" : "");
+    var dLabel = r.dueLocal ? '<span class="oc-due' + (r.overdue ? " overdue" : "") + '">' +
+      (r.overdue ? "已逾期 " : "") + r.dueLocal + " " + esc(r.dueText) + "</span>" : "";
+    link.innerHTML =
+      '<span class="' + tagCls + '">' + esc(r.label) + "</span>" +
+      '<span class="oc-title">' + esc(r.text) + "</span>" +
+      (r.course ? '<span class="oc-course">' + esc(r.course) + "</span>" : "") +
+      dLabel;
+    link.title = (r.course ? r.course + " · " : "") + r.text;
+    row.appendChild(link);
+    if (r.archived && !r.done) row.appendChild(actionButton("恢复", function () { move(r, "restore"); }));
+    return row;
+  }
+
+  function localNode(r) {
+    var row = document.createElement("div");
+    row.className = "task-row drag-task" + (r.done ? " done" : "");
+    row.draggable = true; row.dataset.key = r.key;
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = r.done;
+    cb.addEventListener("change", function () {
+      var all = PortalTasks.load();
+      var target = all.find(function (x) { return x.id === r.id; });
+      if (target) {
+        target.done = cb.checked;
+        if (cb.checked) target.archived = true;
+        PortalTasks.save(all);
+      }
+      render();
+    });
+    var span = document.createElement("span");
+    span.className = "task-text";
+    span.textContent = r.text + (r.date ? "  ·  " + r.date : "");
+    var del = document.createElement("button");
+    del.className = "task-del"; del.textContent = "✕"; del.title = "删除";
+    del.addEventListener("click", function () {
+      PortalTasks.save(PortalTasks.load().filter(function (x) { return x.id !== r.id; }));
+      render();
+    });
+    row.appendChild(cb); row.appendChild(span); row.appendChild(del);
+    if (r.archived) row.appendChild(actionButton("恢复", function () { move(r, "restore"); }));
+    return row;
+  }
+
+  function actionButton(text, fn) {
+    var b = document.createElement("button");
+    b.className = "task-action"; b.textContent = text;
+    b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+    return b;
+  }
+
+  function allRows() { return localRows().concat(canvasRows()); }
+
+  function move(r, dest) {
+    if (dest === "archive") {
+      if (r.source === "local") {
+        var all = PortalTasks.load();
+        var target = all.find(function (x) { return x.id === r.id; });
+        if (target) target.archived = true;
+        PortalTasks.save(all);
+      } else {
+        PortalTasks.setState(r.key, { archived: true, home: false });
+      }
+    } else if (dest === "home") {
+      if (r.done) return;
+      if (r.source === "local") {
+        var tasks = PortalTasks.load();
+        var item = tasks.find(function (x) { return x.id === r.id; });
+        if (item) item.archived = false;
+        PortalTasks.save(tasks);
+      }
+      PortalTasks.setState(r.key, { archived: false, home: true });
+    } else {
+      if (r.source === "local") {
+        var locals = PortalTasks.load();
+        var local = locals.find(function (x) { return x.id === r.id; });
+        if (local) { local.archived = false; local.done = false; }
+        PortalTasks.save(locals);
+      }
+      if (r.source === "canvas" && r.done) return;
+      PortalTasks.setState(r.key, { archived: false, home: false });
+    }
+    render();
+  }
+
+  function wireDrag(node, r) {
+    node.addEventListener("dragstart", function () { draggedKey = r.key; });
+    node.addEventListener("dragend", function () { draggedKey = null; });
+  }
+
+  function taskNode(r) {
+    var node = r.source === "canvas" ? canvasNode(r) : localNode(r);
+    wireDrag(node, r);
+    return node;
+  }
+
+  function groupLabel(date, isCanvas) {
+    if (isCanvas && (!date || date === "9999-99-99")) return "无截止日期";
+    var tk = todayKey();
+    if (date === tk) return "今天";
+    if (!date) return "无日期";
+    if (date < tk) return "逾期 · " + date;
+    return date;
+  }
+
+  function render() {
+    var sourceRows = allRows();
+    var rows = sourceRows.filter(passes);
+    rows.sort(function (a, b) {
+      var ao = a.overdue ? 0 : 1, bo = b.overdue ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      if (a._date !== b._date) return a._date < b._date ? -1 : 1;
+      if (a.source !== b.source) return a.source === "canvas" ? -1 : 1;
+      return a.text.localeCompare(b.text, "zh");
+    });
+
+    listEl.innerHTML = "";
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="mail-empty">没有符合条件的任务 🎉</div>';
+    }
+
+    var groups = [];
+    rows.forEach(function (r) {
+      var key = r.overdue ? ("逾期 · " + (r.dueLocal || r.date || ""))
+                          : (r._date && r._date !== "9999-99-99" ? r._date : "nodate");
+      var g = groups.find(function (x) { return x.key === key; });
+      if (!g) { g = { key: key, label: groupLabel(r._date, r.source === "canvas"), items: [] }; groups.push(g); }
+      g.items.push(r);
+    });
+
+    groups.forEach(function (g) {
+      var head = document.createElement("div");
+      head.className = "group-head";
+      head.innerHTML = esc(g.label) + ' <span class="n">' + g.items.length + " 项</span>";
+      listEl.appendChild(head);
+      g.items.forEach(function (r) {
+        listEl.appendChild(taskNode(r));
+      });
+    });
+
+    homeListEl.innerHTML = "";
+    var homeRows = sourceRows.filter(function (r) { return r.home && !r.archived; });
+    if (!homeRows.length) homeListEl.innerHTML = '<div class="mail-empty">拖入任务，或在下方添加</div>';
+    homeRows.forEach(function (r) { homeListEl.appendChild(taskNode(r)); });
+
+    var archived = sourceRows.filter(function (r) { return r.archived; });
+    document.getElementById("homeCount").textContent = homeRows.length + " 项";
+    document.getElementById("archiveCount").textContent = archived.length + " 项 · 点击查看";
+    archiveListEl.innerHTML = "";
+    if (!archived.length) archiveListEl.innerHTML = '<div class="mail-empty">还没有归档任务</div>';
+    archived.forEach(function (r) { archiveListEl.appendChild(taskNode(r)); });
+
+    var c = PortalCanvas.cache();
+    document.getElementById("updated").textContent =
+      c.updated ? "Canvas 更新 " + new Date(c.updated).toLocaleString("zh-CN")
+                  + " · 共 " + (c.tasks || []).length + " 项 Canvas 任务" : "";
+  }
+
+  document.querySelectorAll(".chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      filter = b.dataset.f;
+      render();
+    });
+  });
+  document.getElementById("q").addEventListener("input", function (e) {
+    query = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  document.getElementById("homeForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("homeInput");
+    var text = input.value.trim();
+    if (!text) return;
+    var all = PortalTasks.load();
+    all.push({ id: "t" + Date.now() + Math.random().toString(36).slice(2, 6),
+      date: todayKey(), text: text, done: false });
+    PortalTasks.save(all); input.value = ""; render();
+  });
+
+  [document.getElementById("homeLane"), document.getElementById("archiveLane")].forEach(function (lane) {
+    lane.addEventListener("dragover", function (e) { e.preventDefault(); lane.classList.add("dragover"); });
+    lane.addEventListener("dragleave", function () { lane.classList.remove("dragover"); });
+    lane.addEventListener("drop", function (e) {
+      e.preventDefault(); lane.classList.remove("dragover");
+      var r = allRows().find(function (x) { return x.key === draggedKey; });
+      if (r) move(r, lane.dataset.drop);
+    });
+  });
+
+  var modal = document.getElementById("archiveModal");
+  function openArchive() { modal.classList.add("show"); }
+  function closeArchive() { modal.classList.remove("show"); }
+  document.getElementById("archiveLane").addEventListener("click", openArchive);
+  document.getElementById("archiveLane").addEventListener("keydown", function (e) { if (e.key === "Enter") openArchive(); });
+  document.getElementById("archiveClose").addEventListener("click", closeArchive);
+  modal.addEventListener("click", function (e) { if (e.target === modal) closeArchive(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeArchive(); });
+
+  PortalCanvas.load().then(render);
+  setInterval(function () { PortalCanvas.load(false).then(render); }, 10 * 60 * 1000);
+  window.addEventListener("storage", render);
+})();
+</script>
+</body>
+</html>

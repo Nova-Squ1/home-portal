@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finance · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <style>
+    .tabs { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0 6px; }
+    .chip { border:1px solid var(--line-strong); background:rgba(255,255,255,.7); border-radius:999px;
+      padding:3px 13px; font-size:12.5px; cursor:pointer; color:var(--ink-2); }
+    .chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .tabs .spacer { flex:1; }
+    .btn { border:1px solid var(--line-strong); background:#fff; border-radius:var(--radius-sm);
+      padding:4px 12px; font-size:13px; cursor:pointer; color:var(--ink); }
+    .btn:hover { background:var(--bg-hover); }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn.primary:hover { background:var(--accent-ink); }
+    .btn.danger { color:var(--bad); }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .link-btn { border:0; background:transparent; color:var(--accent-ink); cursor:pointer; font-size:12px; padding:0; white-space:nowrap; }
+    .num { font-variant-numeric:tabular-nums; }
+    .muted { color:var(--ink-3); }
+    .income { color:var(--good); }
+    .kpi .value.income { color:var(--good); }
+    .neg, .kpi .value.neg { color:var(--bad); }
+
+    .group-head { margin:16px 2px 6px; font-size:12px; font-weight:600; color:var(--ink-2);
+      display:flex; align-items:center; gap:8px; }
+    .group-head::after { content:""; flex:1; height:1px; background:var(--line); order:1; }
+    .group-head .sum { order:2; font-weight:400; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+    .tag { display:inline-block; font-size:11px; padding:0 7px; border-radius:4px; background:#e8e6e1;
+      color:var(--ink-2); white-space:nowrap; }
+
+    /* 订阅 */
+    .sub-row { display:grid; grid-template-columns:minmax(0,1fr) 150px 130px; gap:12px; align-items:center;
+      padding:9px 6px; border-bottom:1px solid var(--line); cursor:pointer; border-radius:var(--radius-sm); }
+    .sub-row:last-child { border-bottom:none; }
+    .sub-row:hover { background:var(--bg-hover); }
+    .sub-name { font-weight:600; overflow-wrap:anywhere; }
+    .sub-meta { font-size:12px; color:var(--ink-3); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .sub-price { text-align:right; }
+    .sub-price .orig { font-weight:600; }
+    .sub-price .conv, .sub-next .rel { font-size:12px; color:var(--ink-3); }
+    .sub-next { text-align:right; }
+    .sub-next.soon .rel, .sub-next.soon .d { color:var(--warn); font-weight:600; }
+    .sub-next.due .rel, .sub-next.due .d { color:var(--bad); font-weight:600; }
+    .up { color:var(--bad); font-size:11px; }
+    .inactive .sub-name, .inactive .orig { color:var(--ink-3); }
+
+    /* 记账 */
+    .quick { display:grid; grid-template-columns:auto 130px 112px 1fr 140px; gap:8px; align-items:center; }
+    .quick .row2 { grid-column:1 / -1; display:grid; grid-template-columns:1fr 2fr auto; gap:8px; align-items:center; }
+    .seg { display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--radius-sm); overflow:hidden; }
+    .seg button { border:0; background:#fff; padding:4px 12px; font-size:13px; cursor:pointer; color:var(--ink-2); }
+    .seg button.on { background:var(--ink); color:#fff; }
+    .seg button.on[data-type="income"] { background:var(--good); }
+    input.f, select.f, textarea.f { width:100%; border:1px solid var(--line-strong); border-radius:var(--radius-sm);
+      padding:4px 8px; font-size:13px; font-family:inherit; background:rgba(255,255,255,.85); color:var(--ink); min-width:0; }
+    textarea.f { resize:vertical; min-height:54px; }
+    .hint { font-size:12px; color:var(--ink-3); min-height:18px; margin-top:6px; }
+    .period { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:14px 0 4px; }
+    .period .label { font-weight:600; min-width:92px; text-align:center; }
+    .search-box { flex:1; min-width:160px; }
+    .summary { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .summary .v { font-size:20px; font-weight:600; }
+    .bars { margin-top:12px; display:grid; gap:5px; }
+    .bar-row { display:grid; grid-template-columns:72px 1fr 96px; gap:8px; align-items:center; font-size:12.5px; }
+    .bar-row .track { height:8px; background:var(--line); border-radius:99px; overflow:hidden; }
+    .bar-row .track i { display:block; height:100%; background:var(--accent); border-radius:99px; }
+    .bar-row .track i.inc { background:var(--good); }
+    .bar-row .amt { text-align:right; }
+    .year-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+    .year-table th, .year-table td { padding:5px 6px; border-bottom:1px solid var(--line); text-align:right; }
+    .year-table th:first-child, .year-table td:first-child { text-align:left; }
+    .year-table tr.click { cursor:pointer; }
+    .year-table tr.click:hover td { background:var(--bg-hover); }
+    .txn { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center;
+      padding:7px 6px; border-bottom:1px solid var(--line); cursor:pointer; border-radius:var(--radius-sm); }
+    .txn:last-child { border-bottom:none; }
+    .txn:hover { background:var(--bg-hover); }
+    .txn .main-line { display:flex; gap:8px; align-items:center; min-width:0; }
+    .txn .note { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .txn .amt { text-align:right; font-weight:600; }
+    .txn .amt small { display:block; font-weight:400; font-size:11.5px; color:var(--ink-3); }
+
+    /* 换算 */
+    .conv-row { display:grid; grid-template-columns:1fr 112px auto 1fr 112px; gap:8px; align-items:center; }
+    .conv-row .swap { text-align:center; color:var(--ink-3); }
+    .rates { font-size:12px; color:var(--ink-3); margin-top:8px; display:flex; flex-wrap:wrap; gap:14px; }
+
+    /* 弹窗 */
+    .modal-backdrop { position:fixed; inset:0; z-index:1000; display:none; place-items:center; padding:20px;
+      background:rgba(20,24,34,.42); backdrop-filter:blur(6px); }
+    .modal-backdrop.show { display:grid; }
+    .modal { width:min(560px,100%); max-height:88vh; overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.5);
+      background:rgba(255,255,255,.95); box-shadow:0 24px 70px rgba(0,0,0,.28); padding:18px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .modal-head h2 { margin:0; font-size:17px; }
+    .modal-close { border:0; background:transparent; cursor:pointer; color:var(--ink-2); font-size:15px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
+    .form-grid label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--ink-2); }
+    .form-grid .full { grid-column:1 / -1; }
+    .inline { display:flex; gap:6px; align-items:center; }
+    .check { flex-direction:row !important; align-items:center; gap:6px !important; font-size:13px !important; color:var(--ink) !important; }
+    .modal-foot { display:flex; gap:8px; margin-top:14px; align-items:center; }
+    .modal-foot .spacer { flex:1; }
+    .history { font-size:12px; color:var(--ink-2); margin-top:4px; }
+    .history div { display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding:2px 0; }
+    .error-box { color:var(--bad); background:var(--bad-bg); border-radius:var(--radius-sm); padding:6px 10px; font-size:13px; margin:8px 0; display:none; }
+
+    @media (max-width:820px) {
+      .quick { grid-template-columns:1fr 1fr; }
+      .quick .seg { grid-column:1 / -1; justify-self:start; }
+      .quick .row2 { grid-template-columns:1fr auto; }
+      .quick .row2 #qNote { grid-column:1 / -1; grid-row:1; }
+      .period .search-box { flex-basis:100%; order:1; }
+      .sub-row { grid-template-columns:minmax(0,1fr) auto; }
+      .sub-next { grid-column:1 / -1; text-align:left; display:flex; gap:8px; }
+      .conv-row { grid-template-columns:1fr 112px; }
+      .conv-row .swap { grid-column:1 / -1; }
+      .form-grid { grid-template-columns:1fr; }
+      .summary .v { font-size:16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Finance</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji">💰</div>
+        <div class="page-head-text">
+          <h1 class="page-title">Finance</h1>
+          <div class="page-meta">
+            <span id="fxMeta">正在加载汇率…</span>
+            <button class="link-btn" id="fxRefresh" title="重新获取汇率">↻ 刷新汇率</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="error-box" id="loadError"></div>
+
+      <div class="kpis">
+        <div class="kpi"><span class="label">本月支出</span><span class="value num" id="kExpense">—</span><span class="delta" id="kExpenseD"></span></div>
+        <div class="kpi"><span class="label">本月收入</span><span class="value num income" id="kIncome">—</span><span class="delta" id="kIncomeD"></span></div>
+        <div class="kpi"><span class="label">本月结余</span><span class="value num" id="kNet">—</span><span class="delta" id="kNetD"></span></div>
+        <div class="kpi"><span class="label">订阅月均</span><span class="value num" id="kSubs">—</span><span class="delta" id="kSubsD"></span></div>
+      </div>
+
+      <div class="tabs">
+        <button class="chip" data-tab="subs">🔁 订阅</button>
+        <button class="chip" data-tab="ledger">🧾 记账</button>
+        <span class="spacer"></span>
+        <button class="btn primary" id="newSub">＋ 新订阅</button>
+      </div>
+
+      <!-- 订阅 -->
+      <section id="subsView" hidden>
+        <div class="card">
+          <div class="card-title">
+            <strong id="subsTitle">订阅</strong>
+            <span class="inline">排序
+              <select class="f" id="subSort" style="width:auto">
+                <option value="next">下次扣款</option>
+                <option value="cost">月均金额</option>
+                <option value="name">名称</option>
+              </select>
+            </span>
+          </div>
+          <div id="subList"></div>
+        </div>
+      </section>
+
+      <!-- 记账 -->
+      <section id="ledgerView" hidden>
+        <div class="card">
+          <form class="quick" id="quickForm" autocomplete="off">
+            <div class="seg" id="quickType">
+              <button type="button" data-type="expense" class="on">支出</button>
+              <button type="button" data-type="income">收入</button>
+            </div>
+            <input class="f num" id="qAmount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="金额" required>
+            <select class="f" id="qCurrency"></select>
+            <input class="f" id="qCategory" list="catOptions" placeholder="分类" maxlength="30">
+            <input class="f" id="qDate" type="date" required>
+            <div class="row2">
+              <input class="f" id="qAccount" list="accountOptions" placeholder="账户 / 支付方式" maxlength="40">
+              <input class="f" id="qNote" placeholder="备注" maxlength="300">
+              <button class="btn primary" type="submit" id="qSubmit">记一笔</button>
+            </div>
+          </form>
+          <div class="hint" id="qPreview"></div>
+        </div>
+
+        <div class="period">
+          <div class="seg" id="periodMode">
+            <button type="button" data-mode="month" class="on">月</button>
+            <button type="button" data-mode="year">年</button>
+          </div>
+          <button class="btn" id="prevPeriod" title="上一期">‹</button>
+          <span class="label num" id="periodLabel"></span>
+          <button class="btn" id="nextPeriod" title="下一期">›</button>
+          <button class="link-btn" id="thisPeriod">回到本期</button>
+          <input type="text" class="f search-box" id="q" placeholder="搜索备注 / 分类 / 账户…">
+          <button class="chip on" data-f="all">全部</button>
+          <button class="chip" data-f="expense">支出</button>
+          <button class="chip" data-f="income">收入</button>
+        </div>
+
+        <div class="card">
+          <div class="summary">
+            <div><div class="muted">收入</div><div class="v num income" id="sIncome">—</div></div>
+            <div><div class="muted">支出</div><div class="v num" id="sExpense">—</div></div>
+            <div><div class="muted">结余</div><div class="v num" id="sNet">—</div></div>
+          </div>
+          <div id="breakdown"></div>
+        </div>
+
+        <div class="card"><div id="txnList"></div></div>
+      </section>
+
+      <!-- 换算 -->
+      <h2 class="h">💱 汇率换算</h2>
+      <div class="card">
+        <div class="conv-row">
+          <input class="f num" id="convA" type="number" step="any" inputmode="decimal" value="100">
+          <select class="f" id="convACur"></select>
+          <span class="swap">=</span>
+          <input class="f num" id="convB" type="number" step="any" inputmode="decimal">
+          <select class="f" id="convBCur"></select>
+        </div>
+        <div class="rates num" id="rateList"></div>
+      </div>
+      <div class="footer-note">数据存于服务器 <code>data/finance.json</code>。外币流水按当天（补记则按流水日期）汇率折算并固定；订阅统计按最新汇率折算。</div>
+    </div>
+  </main>
+</div>
+
+<datalist id="catOptions"></datalist>
+<datalist id="subCatOptions"></datalist>
+<datalist id="accountOptions"></datalist>
+
+<div class="modal-backdrop" id="subModal">
+  <form class="modal" id="subForm" role="dialog" aria-modal="true" aria-labelledby="subModalTitle" autocomplete="off">
+    <div class="modal-head"><h2 id="subModalTitle">新订阅</h2><button type="button" class="modal-close" data-close>✕</button></div>
+    <div class="error-box" id="subError"></div>
+    <div class="form-grid">
+      <label class="full">名称<input class="f" name="name" maxlength="80" required placeholder="如 ChatGPT Plus"></label>
+      <label>金额<input class="f num" name="amount" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+      <label>币种<select class="f" name="currency"></select></label>
+      <label>周期<span class="inline">每<input class="f num" name="interval" type="number" min="1" max="120" value="1" style="width:64px">
+        <select class="f" name="cycle"><option value="month">月</option><option value="year">年</option><option value="week">周</option><option value="day">天</option></select></span></label>
+      <label>扣款日（任意一次）<input class="f" name="start_date" type="date" required></label>
+      <label>分类<input class="f" name="category" list="subCatOptions" maxlength="30" placeholder="如 AI / 影音 / 云服务"></label>
+      <label>支付方式<input class="f" name="account" list="accountOptions" maxlength="40"></label>
+      <label class="full">链接<input class="f" name="url" maxlength="500" placeholder="管理 / 取消订阅的页面（可选）"></label>
+      <label class="full">备注<textarea class="f" name="note" maxlength="500"></textarea></label>
+      <label class="check"><input type="checkbox" name="active" checked> 启用中</label>
+      <label class="check"><input type="checkbox" name="auto_log" checked> 扣款日自动记一笔支出</label>
+      <label id="logFromWrap">自动记账起始日期<input class="f" name="log_from" type="date"></label>
+      <div class="full hint" id="subPreview"></div>
+      <div class="full" id="subHistory"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn danger" id="subDelete" hidden>删除</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary" id="subSave">保存</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="txnModal">
+  <form class="modal" id="txnForm" role="dialog" aria-modal="true" aria-labelledby="txnModalTitle" autocomplete="off">
+    <div class="modal-head"><h2 id="txnModalTitle">编辑流水</h2><button type="button" class="modal-close" data-close>✕</button></div>
+    <div class="error-box" id="txnError"></div>
+    <div class="form-grid">
+      <label>类型<select class="f" name="type"><option value="expense">支出</option><option value="income">收入</option></select></label>
+      <label>日期<input class="f" name="date" type="date" required></label>
+      <label>金额<input class="f num" name="amount" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+      <label>币种<select class="f" name="currency"></select></label>
+      <label>分类<input class="f" name="category" list="catOptions" maxlength="30"></label>
+      <label>账户 / 支付方式<input class="f" name="account" list="accountOptions" maxlength="40"></label>
+      <label class="full">备注<input class="f" name="note" maxlength="300"></label>
+      <div class="full hint" id="txnInfo"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn danger" id="txnDelete">删除</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary" id="txnSave">保存</button>
+    </div>
+  </form>
+</div>
+
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+(function () {
+  PortalLayout.mount({ active: "finance", rail: false });
+
+  // 与 finance.py 的 CURRENCIES 保持一致
+  var CURRENCIES = [
+    { code: "CNY", name: "人民币", symbol: "¥" },
+    { code: "USD", name: "美元", symbol: "US$" },
+    { code: "GBP", name: "英镑", symbol: "£" },
+    { code: "HKD", name: "港币", symbol: "HK$" }
+  ];
+  var CYCLE_TEXT = { day: "天", week: "周", month: "月", year: "年" };
+  // 折算成「每月」的系数（按平均月长）
+  var PER_MONTH = { day: 30.436875, week: 4.348125, month: 1, year: 1 / 12 };
+  var EXPENSE_CATS = ["餐饮", "交通", "购物", "日用", "娱乐", "学习", "订阅", "住房", "通讯", "医疗", "旅行", "人情", "其他"];
+  var INCOME_CATS = ["工资", "奖学金", "兼职", "生活费", "红包", "报销", "退款", "理财", "其他"];
+  var SUB_CATS = ["AI", "影音", "云服务", "软件", "学习", "游戏", "通讯", "会员", "其他"];
+  var ACCOUNTS = ["支付宝", "微信", "银行卡", "信用卡", "PayPal", "现金"];
+  var TAB_KEY = "nova.finance.tab", CUR_KEY = "nova.finance.currency";
+  var JSON_HEADERS = { "Content-Type": "application/json" };
+
+  var state = { subscriptions: [], transactions: [], fx: { rates: { CNY: 1 } }, today: PortalTasks.todayKey() };
+  var tab = { "#subs": "subs", "#ledger": "ledger" }[location.hash] || remembered(TAB_KEY) || "subs";
+  var quickType = "expense", mode = "month", filter = "all", query = "";
+  var cursor = new Date(); // 当前查看的月份 / 年份
+  var editingSub = null, editingTxn = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function remembered(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+  function remember(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
+
+  function request(url, options) {
+    return fetch(url, options).then(function (response) {
+      return response.json().then(function (d) { return d; }, function () { return null; }).then(function (data) {
+        if (!response.ok || !data) {
+          throw new Error((data && data.error) || (response.ok ? "服务器返回了非预期内容，登录可能已过期，请刷新页面" : "请求失败（HTTP " + response.status + "）"));
+        }
+        return data;
+      });
+    });
+  }
+  function send(method, url, body) {
+    return request(url, { method: method, headers: JSON_HEADERS, body: body ? JSON.stringify(body) : undefined });
+  }
+
+  // ---------- 金额与汇率
+  function curInfo(code) { return CURRENCIES.find(function (c) { return c.code === code; }) || { code: code, symbol: code + " " }; }
+  function money(amount, code) {
+    var n = Number(amount) || 0;
+    var s = Math.abs(n).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (n < 0 ? "-" : "") + curInfo(code || "CNY").symbol + s;
+  }
+  function yuan(n) { return money(n, "CNY"); }
+  function toCny(amount, code) {
+    var per = (state.fx.rates || {})[code];
+    return per ? amount / per : NaN;
+  }
+  function fromCny(amount, code) {
+    var per = (state.fx.rates || {})[code];
+    return per ? amount * per : NaN;
+  }
+  function monthlyCny(sub) { return toCny(sub.amount, sub.currency) * PER_MONTH[sub.cycle] / sub.interval; }
+  function cycleText(sub) { return sub.interval === 1 ? "每" + CYCLE_TEXT[sub.cycle] : "每 " + sub.interval + " " + CYCLE_TEXT[sub.cycle]; }
+
+  function fillCurrencySelect(select, value) {
+    select.innerHTML = CURRENCIES.map(function (c) {
+      return '<option value="' + c.code + '">' + c.code + " " + c.name + "</option>";
+    }).join("");
+    select.value = value || "CNY";
+  }
+
+  // ---------- 日期
+  function parseDay(key) { var p = key.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function daysBetween(a, b) { return Math.round((parseDay(b) - parseDay(a)) / 86400000); }
+  function monthKey(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  function weekday(key) { return "日一二三四五六".charAt(parseDay(key).getDay()); }
+  function prettyDay(key) {
+    var d = parseDay(key);
+    var sameYear = d.getFullYear() === parseDay(state.today).getFullYear();
+    return (sameYear ? "" : d.getFullYear() + "年") + (d.getMonth() + 1) + "月" + d.getDate() + "日 周" + weekday(key);
+  }
+  function inPeriod(dateKey) {
+    return mode === "year" ? dateKey.slice(0, 4) === String(cursor.getFullYear()) : dateKey.slice(0, 7) === monthKey(cursor);
+  }
+
+  // ---------- 加载
+  function load() {
+    return request("/api/finance", { cache: "no-store" }).then(function (data) {
+      state = data;
+      $("loadError").style.display = "none";
+      render();
+    }).catch(function (e) {
+      $("loadError").textContent = "加载失败：" + e.message;
+      $("loadError").style.display = "block";
+    });
+  }
+
+  // ---------- 渲染
+  function render() {
+    renderFx();
+    renderKpis();
+    renderOptions();
+    document.querySelectorAll(".tabs .chip").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === tab); });
+    $("subsView").hidden = tab !== "subs";
+    $("ledgerView").hidden = tab !== "ledger";
+    $("newSub").hidden = tab !== "subs";
+    if (tab === "subs") renderSubs(); else renderLedger();
+    renderConverter("a");
+  }
+
+  function renderFx() {
+    var fx = state.fx || {};
+    if (!fx.updated) { $("fxMeta").textContent = "汇率尚未获取，外币暂不能折算"; }
+    else {
+      $("fxMeta").textContent = "汇率 " + new Date(fx.updated).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) +
+        " · " + (fx.source || "") + " · 每 6 小时自动更新";
+    }
+    $("rateList").innerHTML = CURRENCIES.filter(function (c) { return c.code !== "CNY"; }).map(function (c) {
+      var v = toCny(1, c.code);
+      return "<span>1 " + c.code + " = " + (isNaN(v) ? "—" : "¥" + v.toFixed(4)) + "</span>";
+    }).join("");
+  }
+
+  function sumPeriod(filterFn) {
+    var inc = 0, exp = 0;
+    state.transactions.forEach(function (t) {
+      if (!filterFn(t)) return;
+      if (t.type === "income") inc += t.cny; else exp += t.cny;
+    });
+    return { income: inc, expense: exp, net: inc - exp };
+  }
+
+  function renderKpis() {
+    var thisMonth = state.today.slice(0, 7);
+    var last = parseDay(state.today); last.setDate(1); last.setMonth(last.getMonth() - 1);
+    var lastMonth = monthKey(last);
+    var cur = sumPeriod(function (t) { return t.date.slice(0, 7) === thisMonth; });
+    var prev = sumPeriod(function (t) { return t.date.slice(0, 7) === lastMonth; });
+    $("kExpense").textContent = yuan(cur.expense);
+    $("kExpenseD").textContent = "上月 " + yuan(prev.expense);
+    $("kIncome").textContent = yuan(cur.income);
+    $("kIncomeD").textContent = "上月 " + yuan(prev.income);
+    $("kNet").textContent = yuan(cur.net);
+    $("kNet").classList.toggle("neg", cur.net < 0);
+    $("kNet").classList.toggle("income", cur.net > 0);
+    $("kNetD").textContent = "上月 " + yuan(prev.net);
+    var active = state.subscriptions.filter(function (s) { return s.active; });
+    var monthly = active.reduce(function (a, s) { var v = monthlyCny(s); return a + (isNaN(v) ? 0 : v); }, 0);
+    $("kSubs").textContent = yuan(monthly);
+    $("kSubsD").textContent = "年 " + yuan(monthly * 12) + " · " + active.length + " 项";
+  }
+
+  function renderOptions() {
+    function uniq(base, field, filterFn) {
+      var seen = {}, out = [];
+      base.concat(state.transactions.filter(filterFn || function () { return true; }).map(function (t) { return t[field]; }),
+        state.subscriptions.map(function (s) { return field === "category" ? "" : s[field]; }))
+        .forEach(function (v) { if (v && !seen[v]) { seen[v] = 1; out.push(v); } });
+      return out.map(function (v) { return '<option value="' + esc(v) + '">'; }).join("");
+    }
+    $("catOptions").innerHTML = uniq(quickType === "income" ? INCOME_CATS : EXPENSE_CATS, "category",
+      function (t) { return t.type === quickType; });
+    $("accountOptions").innerHTML = uniq(ACCOUNTS, "account");
+    var subCats = {};
+    $("subCatOptions").innerHTML = SUB_CATS.concat(state.subscriptions.map(function (s) { return s.category; }))
+      .filter(function (c) { return c && !subCats[c] && (subCats[c] = 1); })
+      .map(function (c) { return '<option value="' + esc(c) + '">'; }).join("");
+  }
+
+  // ---------- 订阅
+  function renderSubs() {
+    var sort = $("subSort").value;
+    var subs = state.subscriptions.slice();
+    subs.sort(function (a, b) {
+      if (sort === "cost") return (monthlyCny(b) || 0) - (monthlyCny(a) || 0);
+      if (sort === "name") return a.name.localeCompare(b.name, "zh");
+      return (a.next_date || "9999") < (b.next_date || "9999") ? -1 : (a.next_date || "9999") > (b.next_date || "9999") ? 1 : 0;
+    });
+    var active = subs.filter(function (s) { return s.active; });
+    var inactive = subs.filter(function (s) { return !s.active; });
+    var soon = active.filter(function (s) { return s.next_date && daysBetween(state.today, s.next_date) <= 30; });
+    var soonSum = soon.reduce(function (a, s) { return a + (toCny(s.amount, s.currency) || 0); }, 0);
+    $("subsTitle").textContent = "订阅 " + active.length + " 项" + (soon.length ? " · 30 天内扣款 " + soon.length + " 次，约 " + yuan(soonSum) : "");
+
+    var list = $("subList");
+    list.innerHTML = "";
+    if (!subs.length) {
+      list.innerHTML = '<div class="mail-empty">还没有订阅，点右上角「＋ 新订阅」添加</div>';
+      return;
+    }
+    active.forEach(function (s) { list.appendChild(subRow(s)); });
+    if (inactive.length) {
+      var head = document.createElement("div");
+      head.className = "group-head";
+      head.textContent = "已停用 · " + inactive.length + " 项";
+      list.appendChild(head);
+      inactive.forEach(function (s) { list.appendChild(subRow(s)); });
+    }
+  }
+
+  function priceChange(s) {
+    var first = (s.price_history || [])[0];
+    if (!first || first.currency !== s.currency || first.amount === s.amount) return "";
+    var pct = (s.amount - first.amount) / first.amount * 100;
+    return '<span class="up" title="首次记录 ' + esc(money(first.amount, first.currency)) + "（" + esc(first.date) + '）">' +
+      (pct > 0 ? "↑" : "↓") + Math.abs(pct).toFixed(0) + "%</span>";
+  }
+
+  function subRow(s) {
+    var row = document.createElement("div");
+    row.className = "sub-row" + (s.active ? "" : " inactive");
+    var cny = toCny(s.amount, s.currency);
+    var monthly = monthlyCny(s);
+    var nextHtml = '<span class="muted">—</span>';
+    var cls = "";
+    if (s.next_date) {
+      var days = daysBetween(state.today, s.next_date);
+      cls = days === 0 ? " due" : days <= 3 ? " soon" : "";
+      nextHtml = '<div class="d num">' + esc(s.next_date.slice(5).replace("-", "/")) + "</div>" +
+        '<div class="rel">' + (days === 0 ? "今天扣款" : days + " 天后") + "</div>";
+    }
+    var meta = [];
+    if (s.category) meta.push('<span class="tag">' + esc(s.category) + "</span>");
+    meta.push("<span>" + cycleText(s) + "</span>");
+    if (s.account) meta.push("<span>" + esc(s.account) + "</span>");
+    if (s.auto_log && s.active) meta.push('<span title="扣款日自动记一笔支出">🧾 自动记账</span>');
+    row.innerHTML =
+      '<div><div class="sub-name">' + esc(s.name) +
+      (s.url ? ' <a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer" class="link-btn" title="打开管理页面">↗</a>' : "") +
+      "</div>" + '<div class="sub-meta">' + meta.join("") + "</div></div>" +
+      '<div class="sub-price num"><div class="orig">' + esc(money(s.amount, s.currency)) + " " + priceChange(s) + "</div>" +
+      '<div class="conv">' + [s.currency !== "CNY" && !isNaN(cny) ? "≈ " + yuan(cny) : "",
+        isNaN(monthly) || s.cycle === "month" && s.interval === 1 ? "" : "月均 " + yuan(monthly)]
+        .filter(Boolean).join(" · ") + "</div></div>" +
+      '<div class="sub-next' + cls + '">' + nextHtml + "</div>";
+    row.addEventListener("click", function (e) { if (!e.target.closest("a")) openSub(s); });
+    return row;
+  }
+
+  // ---------- 订阅弹窗
+  var subForm = $("subForm");
+  function openSub(sub) {
+    editingSub = sub || null;
+    $("subModalTitle").textContent = sub ? "编辑订阅" : "新订阅";
+    $("subError").style.display = "none";
+    $("subDelete").hidden = !sub;
+    var f = subForm.elements;
+    var d = sub || { name: "", amount: "", currency: remembered(CUR_KEY) || "CNY", cycle: "month", interval: 1,
+      start_date: state.today, category: "", account: "", url: "", note: "", active: true, auto_log: true, log_from: state.today };
+    f.name.value = d.name; f.amount.value = d.amount; fillCurrencySelect(f.currency, d.currency);
+    f.cycle.value = d.cycle; f.interval.value = d.interval; f.start_date.value = d.start_date;
+    f.category.value = d.category || ""; f.account.value = d.account || ""; f.url.value = d.url || "";
+    f.note.value = d.note || ""; f.active.checked = !!d.active; f.auto_log.checked = !!d.auto_log;
+    f.log_from.value = d.log_from || state.today;
+    var history = (sub && sub.price_history) || [];
+    $("subHistory").innerHTML = history.length > 1 ? '<div class="muted" style="font-size:12px">价格记录</div><div class="history">' +
+      history.map(function (h) { return "<div><span>" + esc(h.date) + "</span><span class=\"num\">" + esc(money(h.amount, h.currency)) + "</span></div>"; }).join("") +
+      "</div>" : "";
+    updateSubPreview();
+    $("subModal").classList.add("show");
+    setTimeout(function () { f.name.focus(); }, 0);
+  }
+
+  // 前端推算下次扣款日，仅用于表单预览；保存后以服务器返回为准
+  function addPeriods(start, cycle, n) {
+    var d = parseDay(start);
+    if (cycle === "day") d.setDate(d.getDate() + n);
+    else if (cycle === "week") d.setDate(d.getDate() + 7 * n);
+    else {
+      var months = cycle === "month" ? n : 12 * n;
+      var day = d.getDate();
+      d.setDate(1); d.setMonth(d.getMonth() + months);
+      d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    }
+    return PortalTasks.todayKey(d);
+  }
+  function previewNext(start, cycle, interval) {
+    if (!start) return "";
+    for (var n = 0; n < 100000; n += 1) {
+      var key = addPeriods(start, cycle, n * interval);
+      if (key >= state.today) return key;
+    }
+    return "";
+  }
+
+  function updateSubPreview() {
+    var f = subForm.elements;
+    var amount = parseFloat(f.amount.value), interval = Math.max(1, parseInt(f.interval.value, 10) || 1);
+    var parts = [];
+    if (f.active.checked) {
+      var next = previewNext(f.start_date.value, f.cycle.value, interval);
+      if (next) parts.push("下次扣款 " + next);
+    }
+    if (amount > 0) {
+      var sub = { amount: amount, currency: f.currency.value, cycle: f.cycle.value, interval: interval };
+      if (f.currency.value !== "CNY") parts.push("每次 ≈ " + yuan(toCny(amount, f.currency.value)));
+      parts.push("月均 " + yuan(monthlyCny(sub)) + " · 年 " + yuan(monthlyCny(sub) * 12));
+    }
+    $("subPreview").textContent = parts.join(" · ");
+    $("logFromWrap").style.visibility = f.auto_log.checked ? "visible" : "hidden";
+  }
+  subForm.addEventListener("input", updateSubPreview);
+  subForm.addEventListener("change", updateSubPreview);
+
+  subForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = subForm.elements;
+    var body = {
+      name: f.name.value, amount: f.amount.value, currency: f.currency.value, cycle: f.cycle.value,
+      interval: f.interval.value, start_date: f.start_date.value, category: f.category.value,
+      account: f.account.value, url: f.url.value, note: f.note.value, active: f.active.checked,
+      auto_log: f.auto_log.checked, log_from: f.log_from.value || state.today
+    };
+    $("subSave").disabled = true;
+    var req = editingSub ? send("PUT", "/api/finance/subscriptions/" + editingSub.id, body)
+                         : send("POST", "/api/finance/subscriptions", body);
+    req.then(function () {
+      remember(CUR_KEY, body.currency);
+      closeModals();
+      portalToast(editingSub ? "订阅已更新" : "订阅已添加");
+      return load();
+    }).catch(function (err) {
+      $("subError").textContent = err.message; $("subError").style.display = "block";
+    }).then(function () { $("subSave").disabled = false; });
+  });
+
+  $("subDelete").addEventListener("click", function () {
+    var sub = editingSub;
+    if (!sub) return;
+    var linked = state.transactions.filter(function (t) { return t.sub_id === sub.id; }).length;
+    var buttons = [{ label: "再想想", value: null, kind: "ghost" }];
+    if (linked) {
+      buttons.push({ label: "只删订阅，保留流水", value: "keep", kind: "primary" });
+      buttons.push({ label: "连 " + linked + " 条流水一起删", value: "drop", kind: "danger" });
+    } else {
+      buttons.push({ label: "删除", value: "keep", kind: "danger" });
+    }
+    PortalDialog.show({
+      tone: "danger", title: "删除订阅「" + sub.name + "」？", cancelValue: null, focus: "cancel", buttons: buttons,
+      message: (linked ? "它自动记过 " + linked + " 笔支出。\n" : "") + "只想暂停的话，取消勾选「启用中」就能保留记录。"
+    }).then(function (choice) {
+      if (!choice) return;
+      send("DELETE", "/api/finance/subscriptions/" + sub.id + (choice === "drop" ? "?with_transactions=1" : ""))
+        .then(function () { closeModals(); portalToast("订阅已删除"); return load(); })
+        .catch(function (err) { $("subError").textContent = err.message; $("subError").style.display = "block"; });
+    });
+  });
+
+  // ---------- 记账
+  function periodLabel() {
+    return mode === "year" ? cursor.getFullYear() + " 年" : cursor.getFullYear() + " 年 " + (cursor.getMonth() + 1) + " 月";
+  }
+
+  function matches(t) {
+    if (filter !== "all" && t.type !== filter) return false;
+    if (!query) return true;
+    return (t.note + " " + t.category + " " + t.account).toLowerCase().indexOf(query) !== -1;
+  }
+
+  function renderLedger() {
+    $("periodLabel").textContent = periodLabel();
+    var rows = state.transactions.filter(function (t) { return inPeriod(t.date); });
+    var sums = sumPeriod(function (t) { return inPeriod(t.date) && matches(t); });
+    $("sIncome").textContent = yuan(sums.income);
+    $("sExpense").textContent = yuan(sums.expense);
+    $("sNet").textContent = yuan(sums.net);
+    $("sNet").className = "v num" + (sums.net < 0 ? " neg" : sums.net > 0 ? " income" : "");
+    renderBreakdown(rows.filter(matches));
+
+    var list = $("txnList");
+    list.innerHTML = "";
+    var shown = rows.filter(matches);
+    if (!shown.length) {
+      list.innerHTML = '<div class="mail-empty">' + (rows.length ? "没有符合条件的流水" : periodLabel() + "还没有记录") + "</div>";
+      return;
+    }
+    var groups = [];
+    shown.forEach(function (t) {
+      var g = groups[groups.length - 1];
+      if (!g || g.date !== t.date) { g = { date: t.date, items: [], inc: 0, exp: 0 }; groups.push(g); }
+      g.items.push(t);
+      if (t.type === "income") g.inc += t.cny; else g.exp += t.cny;
+    });
+    groups.forEach(function (g) {
+      var head = document.createElement("div");
+      head.className = "group-head";
+      head.innerHTML = "<span>" + esc(prettyDay(g.date)) + (g.date === state.today ? " · 今天" : "") + "</span>" +
+        '<span class="sum">' + (g.exp ? "支 " + yuan(g.exp) : "") + (g.exp && g.inc ? "　" : "") + (g.inc ? "收 " + yuan(g.inc) : "") + "</span>";
+      list.appendChild(head);
+      g.items.forEach(function (t) { list.appendChild(txnRow(t)); });
+    });
+  }
+
+  function txnRow(t) {
+    var row = document.createElement("div");
+    row.className = "txn";
+    var sign = t.type === "income" ? "+" : "-";
+    row.innerHTML =
+      '<div class="main-line">' + (t.sub_id ? '<span title="订阅自动记账">🔁</span>' : "") +
+      '<span class="tag">' + esc(t.category || (t.type === "income" ? "收入" : "支出")) + "</span>" +
+      '<span class="note">' + esc(t.note || "") + "</span>" +
+      (t.account ? '<span class="muted" style="font-size:12px;white-space:nowrap">' + esc(t.account) + "</span>" : "") + "</div>" +
+      '<div class="amt num' + (t.type === "income" ? " income" : "") + '">' + sign + esc(yuan(t.cny)) +
+      (t.currency !== "CNY" ? "<small>" + esc(money(t.amount, t.currency)) + " @ " + t.rate.toFixed(4) + "</small>" : "") + "</div>";
+    row.addEventListener("click", function () { openTxn(t); });
+    return row;
+  }
+
+  function renderBreakdown(rows) {
+    var box = $("breakdown");
+    if (mode === "year") {
+      var months = [];
+      for (var m = 1; m <= 12; m += 1) months.push({ m: m, inc: 0, exp: 0 });
+      rows.forEach(function (t) {
+        var slot = months[Number(t.date.slice(5, 7)) - 1];
+        if (t.type === "income") slot.inc += t.cny; else slot.exp += t.cny;
+      });
+      box.innerHTML = '<table class="year-table num"><thead><tr><th>月份</th><th>收入</th><th>支出</th><th>结余</th></tr></thead><tbody>' +
+        months.map(function (x) {
+          var net = x.inc - x.exp;
+          return '<tr class="click" data-m="' + x.m + '"><td>' + x.m + " 月</td><td class=\"income\">" + (x.inc ? yuan(x.inc) : "—") + "</td><td>" +
+            (x.exp ? yuan(x.exp) : "—") + '</td><td class="' + (net < 0 ? "neg" : "") + '">' +
+            (x.inc || x.exp ? yuan(net) : "—") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+      box.querySelectorAll("tr.click").forEach(function (tr) {
+        tr.addEventListener("click", function () {
+          cursor = new Date(cursor.getFullYear(), Number(tr.dataset.m) - 1, 1);
+          setMode("month");
+        });
+      });
+      return;
+    }
+    function bars(type, cls) {
+      var totals = {}, sum = 0;
+      rows.forEach(function (t) {
+        if (t.type !== type) return;
+        var c = t.category || "未分类";
+        totals[c] = (totals[c] || 0) + t.cny; sum += t.cny;
+      });
+      var cats = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; });
+      if (!cats.length) return "";
+      var max = totals[cats[0]];
+      return '<div class="muted" style="font-size:12px;margin-top:12px">' + (type === "income" ? "收入" : "支出") + "分类</div>" +
+        '<div class="bars">' + cats.map(function (c) {
+          return '<div class="bar-row"><span>' + esc(c) + '</span><span class="track"><i class="' + cls + '" style="width:' +
+            (totals[c] / max * 100).toFixed(1) + '%"></i></span><span class="amt num">' + yuan(totals[c]) +
+            ' <span class="muted">' + Math.round(totals[c] / sum * 100) + "%</span></span></div>";
+        }).join("") + "</div>";
+    }
+    box.innerHTML = (filter !== "income" ? bars("expense", "") : "") + (filter !== "expense" ? bars("income", "inc") : "");
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll("#periodMode button").forEach(function (b) { b.classList.toggle("on", b.dataset.mode === mode); });
+    renderLedger();
+  }
+  document.querySelectorAll("#periodMode button").forEach(function (b) {
+    b.addEventListener("click", function () { setMode(b.dataset.mode); });
+  });
+  function shift(step) {
+    cursor = mode === "year" ? new Date(cursor.getFullYear() + step, cursor.getMonth(), 1)
+                             : new Date(cursor.getFullYear(), cursor.getMonth() + step, 1);
+    renderLedger();
+  }
+  $("prevPeriod").addEventListener("click", function () { shift(-1); });
+  $("nextPeriod").addEventListener("click", function () { shift(1); });
+  $("thisPeriod").addEventListener("click", function () { cursor = new Date(); renderLedger(); });
+  document.querySelectorAll(".period .chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".period .chip").forEach(function (x) { x.classList.toggle("on", x === b); });
+      filter = b.dataset.f;
+      renderLedger();
+    });
+  });
+  $("q").addEventListener("input", function (e) { query = e.target.value.trim().toLowerCase(); renderLedger(); });
+
+  // ---------- 快速记一笔
+  function setQuickType(type) {
+    quickType = type;
+    document.querySelectorAll("#quickType button").forEach(function (b) { b.classList.toggle("on", b.dataset.type === type); });
+    renderOptions();
+  }
+  document.querySelectorAll("#quickType button").forEach(function (b) {
+    b.addEventListener("click", function () { setQuickType(b.dataset.type); });
+  });
+  function updateQuickPreview() {
+    var amount = parseFloat($("qAmount").value), cur = $("qCurrency").value;
+    $("qPreview").textContent = amount > 0 && cur !== "CNY" ? "≈ " + yuan(toCny(amount, cur)) + "（保存时按流水日期汇率）" : "";
+  }
+  $("qAmount").addEventListener("input", updateQuickPreview);
+  $("qCurrency").addEventListener("change", updateQuickPreview);
+
+  $("quickForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var body = { type: quickType, amount: $("qAmount").value, currency: $("qCurrency").value,
+      category: $("qCategory").value, date: $("qDate").value, account: $("qAccount").value, note: $("qNote").value };
+    $("qSubmit").disabled = true;
+    send("POST", "/api/finance/transactions", body).then(function (t) {
+      remember(CUR_KEY, body.currency);
+      $("qAmount").value = ""; $("qNote").value = ""; $("qCategory").value = "";
+      updateQuickPreview();
+      portalToast((t.type === "income" ? "收入 +" : "支出 -") + yuan(t.cny) + " 已记录");
+      if (!inPeriod(t.date)) cursor = parseDay(t.date);
+      return load();
+    }).catch(function (err) { return PortalDialog.alert({ tone: "warn", title: "没记上…", message: err.message }); })
+      .then(function () { $("qSubmit").disabled = false; $("qAmount").focus(); });
+  });
+
+  // ---------- 流水弹窗
+  var txnForm = $("txnForm");
+  function openTxn(t) {
+    editingTxn = t;
+    $("txnError").style.display = "none";
+    var f = txnForm.elements;
+    f.type.value = t.type; f.date.value = t.date; f.amount.value = t.amount;
+    fillCurrencySelect(f.currency, t.currency);
+    f.category.value = t.category || ""; f.account.value = t.account || ""; f.note.value = t.note || "";
+    $("txnInfo").textContent = (t.currency !== "CNY" ? "汇率 1 " + t.currency + " = ¥" + t.rate.toFixed(4) + "，折合 " + yuan(t.cny) + "；改日期或币种会按新日期重新取汇率。" : "") +
+      (t.sub_id ? " 由订阅自动生成。" : "");
+    $("txnModal").classList.add("show");
+  }
+  txnForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = txnForm.elements;
+    var body = { type: f.type.value, date: f.date.value, amount: f.amount.value, currency: f.currency.value,
+      category: f.category.value, account: f.account.value, note: f.note.value };
+    $("txnSave").disabled = true;
+    send("PUT", "/api/finance/transactions/" + editingTxn.id, body)
+      .then(function () { closeModals(); portalToast("已保存"); return load(); })
+      .catch(function (err) { $("txnError").textContent = err.message; $("txnError").style.display = "block"; })
+      .then(function () { $("txnSave").disabled = false; });
+  });
+  $("txnDelete").addEventListener("click", function () {
+    var txn = editingTxn;
+    if (!txn) return;
+    PortalDialog.confirm({
+      danger: true, title: "删除这条流水？", confirmText: "删除",
+      message: (txn.type === "income" ? "收入 +" : "支出 -") + yuan(txn.cny) + (txn.note ? " · " + txn.note : "") + (txn.sub_id ? "\n它是订阅自动记的，删了不会再补。" : "")
+    }).then(function (ok) {
+      if (!ok) return;
+      send("DELETE", "/api/finance/transactions/" + txn.id)
+        .then(function () { closeModals(); portalToast("已删除"); return load(); })
+        .catch(function (err) { $("txnError").textContent = err.message; $("txnError").style.display = "block"; });
+    });
+  });
+
+  // ---------- 换算
+  function renderConverter(from) {
+    var a = $("convA"), b = $("convB");
+    var src = from === "a" ? a : b, dst = from === "a" ? b : a;
+    var srcCur = from === "a" ? $("convACur").value : $("convBCur").value;
+    var dstCur = from === "a" ? $("convBCur").value : $("convACur").value;
+    var v = parseFloat(src.value);
+    if (isNaN(v)) { dst.value = ""; return; }
+    var out = fromCny(toCny(v, srcCur), dstCur);
+    dst.value = isNaN(out) ? "" : (Math.round(out * 100) / 100).toString();
+  }
+  $("convA").addEventListener("input", function () { renderConverter("a"); });
+  $("convB").addEventListener("input", function () { renderConverter("b"); });
+  $("convACur").addEventListener("change", function () { renderConverter("a"); });
+  $("convBCur").addEventListener("change", function () { renderConverter("a"); });
+
+  // ---------- 通用
+  function closeModals() {
+    document.querySelectorAll(".modal-backdrop").forEach(function (m) { m.classList.remove("show"); });
+  }
+  document.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", closeModals); });
+  document.querySelectorAll(".modal-backdrop").forEach(function (m) {
+    m.addEventListener("click", function (e) { if (e.target === m) closeModals(); });
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModals(); });
+
+  document.querySelectorAll(".tabs .chip").forEach(function (b) {
+    b.addEventListener("click", function () { tab = b.dataset.tab; remember(TAB_KEY, tab); render(); });
+  });
+  $("subSort").addEventListener("change", renderSubs);
+  $("newSub").addEventListener("click", function () { openSub(null); });
+  $("fxRefresh").addEventListener("click", function () {
+    request("/api/finance/fx?refresh=1", { cache: "no-store" })
+      .then(function (fx) { state.fx = fx; render(); portalToast("汇率已更新"); })
+      .catch(function (err) { portalToast("刷新失败：" + err.message); });
+  });
+
+  fillCurrencySelect($("qCurrency"), remembered(CUR_KEY) || "CNY");
+  fillCurrencySelect($("convACur"), "USD");
+  fillCurrencySelect($("convBCur"), "CNY");
+  $("qDate").value = state.today;
+  render();
+  load();
+  // 切回页面时刷新（顺带让后端补记跨天的订阅扣款）
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      if ($("qDate").value === state.today) $("qDate").value = PortalTasks.todayKey();
+      load();
+    }
+  });
+})();
+</script>
+</body>
+</html>

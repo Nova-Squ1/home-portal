@@ -1,0 +1,124 @@
+{
+  "_comment": "复制为 config/site.json 后按需修改；config/site.json 不进 git。所有链接 href/url 都是示例。",
+  "workspace_url": "https://www.example.com/",
+  "server_label": "My VPS",
+  "footer": "Nova Workspace · 数据来自本机后端与 IMAP，仅内网监听，公网经反向代理 + 单点登录",
+  "canvas": {
+    "name": "Canvas",
+    "base_url": "https://canvas.example.edu",
+    "inbox_url": "https://canvas.example.edu/conversations#filter=type=inbox"
+  },
+  "workspace_links": [
+    {
+      "icon": "📺",
+      "label": "YouTube",
+      "href": "https://www.youtube.com/"
+    }
+  ],
+  "websites": [
+    {
+      "icon": "🖥️",
+      "label": "Server Panel",
+      "href": "https://panel.example.com/"
+    },
+    {
+      "icon": "☁️",
+      "label": "Cloudflare",
+      "href": "https://dash.cloudflare.com/"
+    }
+  ],
+  "mail_links": [
+    {
+      "label": "Webmail",
+      "href": "https://mail.example.com/",
+      "color": "#2eaadc"
+    },
+    {
+      "label": "Gmail",
+      "href": "https://mail.google.com/",
+      "color": "#d93025"
+    }
+  ],
+  "rail": [
+    {
+      "title": "Trending",
+      "links": [
+        {
+          "icon": "🐙",
+          "label": "GitHub Trending",
+          "url": "https://github.com/trending"
+        },
+        {
+          "icon": "🟧",
+          "label": "Hacker News",
+          "url": "https://news.ycombinator.com/"
+        }
+      ]
+    },
+    {
+      "title": "Study",
+      "links": [
+        {
+          "icon": "🤗",
+          "label": "Hugging Face",
+          "url": "https://huggingface.co"
+        },
+        {
+          "icon": "📄",
+          "label": "arXiv",
+          "url": "https://arxiv.org"
+        }
+      ]
+    },
+    {
+      "title": "AI",
+      "links": [
+        {
+          "icon": "💬",
+          "label": "ChatGPT",
+          "url": "https://chatgpt.com/"
+        },
+        {
+          "icon": "✨",
+          "label": "Claude",
+          "url": "https://claude.ai/"
+        }
+      ]
+    }
+  ],
+  "engines": [
+    {
+      "name": "DuckDuckGo",
+      "bang": null,
+      "url": "https://duckduckgo.com/?q={q}"
+    },
+    {
+      "name": "GitHub",
+      "bang": "!gh",
+      "url": "https://github.com/search?q={q}"
+    },
+    {
+      "name": "Stack Overflow",
+      "bang": "!so",
+      "url": "https://stackoverflow.com/search?q={q}"
+    },
+    {
+      "name": "arXiv",
+      "bang": "!arxiv",
+      "url": "https://arxiv.org/search/?query={q}&searchtype=all"
+    }
+  ],
+  "settings_links": [
+    {
+      "icon": "🔒",
+      "label": "单点登录账号与登出",
+      "href": "https://auth.example.com/"
+    }
+  ],
+  "mail_setup_links": [
+    {
+      "label": "Gmail",
+      "href": "https://mail.google.com/"
+    }
+  ]
+}

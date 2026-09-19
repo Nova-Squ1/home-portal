@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendar · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <style>
+    .cal-nav { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; }
+    .cal-nav h2 { margin: 0; font-size: 18px; font-weight: 600; min-width: 150px; }
+    .cal-nav button {
+      border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius-sm);
+      padding: 3px 10px; cursor: pointer; font-size: 13px; color: var(--ink);
+    }
+    .cal-nav button:hover { background: var(--bg-hover); }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+      width: 100%; max-width: 100%; min-width: 0;
+      border: 1px solid var(--line); border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .cal-dow, .cal-cell {
+      border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      min-width: 0; min-height: 118px; padding: 6px 7px; overflow: hidden;
+    }
+    .cal-dow {
+      min-height: 0; padding: 6px 8px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3);
+      background: var(--bg-soft);
+    }
+    .cal-grid > :nth-child(7n) { border-right: none; }
+    .cal-cell:nth-last-child(-n+7) { border-bottom: none; }
+    .cal-grid.week-view .cal-cell { min-height: 170px; }
+    .cal-cell.other { background: var(--bg-soft); color: var(--ink-3); }
+    .cal-cell.today .cal-num {
+      background: var(--accent); color: #fff; border-radius: 50%;
+      width: 22px; height: 22px; display: inline-grid; place-items: center;
+    }
+    .cal-num { font-size: 12.5px; font-weight: 600; }
+    .cal-task {
+      margin-top: 3px; font-size: 11.5px; padding: 1px 6px; border-radius: 3px;
+      background: var(--accent-soft); color: var(--accent-ink);
+      max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+    }
+    .cal-task.done { background: var(--bg-hover); color: var(--ink-3); text-decoration: line-through; }
+    .cal-task.oc {
+      background: #eef6fb; color: var(--accent-ink);
+      display: flex; align-items: flex-start; gap: 4px;
+    }
+    .cal-task.oc.overdue { background: var(--bad-bg); color: var(--bad); }
+    .cal-task.oc.done { background: var(--bg-hover); color: var(--ink-3); text-decoration: line-through; }
+    .cal-task.oc .oc-glyph { flex: 0 0 auto; }
+    .cal-task .cal-item-text { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+    .cal-task.oc[href]:hover { filter: brightness(.97); }
+    .cal-task.course {
+      background: #edf7fb; color: var(--accent-ink); border-left: 3px solid var(--accent);
+      padding-left: 4px;
+    }
+    .cal-note { margin-top: 3px; font-size: 10.5px; color: var(--bad); line-height: 1.25; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Nova Workspace</span><span>Workspace</span><span>Calendar</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji">🗓️</div>
+        <div class="page-head-text">
+          <h1 class="page-title">Calendar</h1>
+          <div class="page-meta"><span>课程、Canvas 与本地任务按日期汇总；课程不计入待办</span></div>
+        </div>
+      </header>
+
+      <div class="cal-nav">
+        <button id="prev">‹</button>
+        <h2 id="calTitle"></h2>
+        <button id="next">›</button>
+        <button id="viewMode" style="margin-left:auto" aria-expanded="false">展开整月</button>
+        <button id="today">今天</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+
+      <h2 class="h">📋 <span id="dayTitle"></span></h2>
+      <div class="card">
+        <div id="dayCourses"></div>
+        <div id="dayTasks"></div>
+        <form class="task-add" id="taskForm">
+          <button class="plus-btn" type="submit">＋</button>
+          <input type="text" id="taskInput" placeholder="为这一天添加任务…" maxlength="120">
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+(function () {
+  PortalLayout.mount({ active: "calendar", rail: false });
+
+  var view = new Date();
+  var selected = new Date();
+  var monthExpanded = false;
+  var grid = document.getElementById("calGrid");
+  var DOW = ["一", "二", "三", "四", "五", "六", "日"];
+
+  function keyOf(d) { return PortalTasks.todayKey(d); }
+  function mondayOf(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  }
+  function shortDate(d) { return (d.getMonth() + 1) + " 月 " + d.getDate() + " 日"; }
+
+  var ocByDate = {};
+
+  function indexCanvas(tasks) {
+    ocByDate = {};
+    (tasks || []).forEach(function (t) {
+      if (PortalTasks.archived("canvas:" + t.id, t.submitted, false)) return;
+      var dk = t.due_local_date;
+      if (!dk) return;
+      (ocByDate[dk] = ocByDate[dk] || []).push(t);
+    });
+  }
+
+  function render() {
+    var start;
+    var dayCount;
+    if (monthExpanded) {
+      var first = new Date(view.getFullYear(), view.getMonth(), 1);
+      var offset = (first.getDay() + 6) % 7;
+      start = new Date(view.getFullYear(), view.getMonth(), 1 - offset);
+      dayCount = 42;
+      document.getElementById("calTitle").textContent =
+        view.getFullYear() + " 年 " + (view.getMonth() + 1) + " 月";
+    } else {
+      start = mondayOf(view);
+      var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      dayCount = 7;
+      document.getElementById("calTitle").textContent =
+        start.getFullYear() + " 年 " + shortDate(start) + "—" + shortDate(end);
+    }
+    grid.classList.toggle("week-view", !monthExpanded);
+    var modeButton = document.getElementById("viewMode");
+    modeButton.textContent = monthExpanded ? "收起本周" : "展开整月";
+    modeButton.setAttribute("aria-expanded", monthExpanded ? "true" : "false");
+    var all = PortalTasks.load();
+    var byDate = {};
+    all.forEach(function (t) {
+      if (PortalTasks.archived("local:" + t.id, t.done, t.archived)) return;
+      (byDate[t.date] = byDate[t.date] || []).push(t);
+    });
+
+    grid.innerHTML = "";
+    DOW.forEach(function (d) {
+      var h = document.createElement("div");
+      h.className = "cal-dow";
+      h.textContent = "周" + d;
+      grid.appendChild(h);
+    });
+
+    var todayK = keyOf(new Date());
+
+    for (var i = 0; i < dayCount; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      var cell = document.createElement("div");
+      cell.className = "cal-cell";
+      if (monthExpanded && d.getMonth() !== view.getMonth()) cell.classList.add("other");
+      if (keyOf(d) === todayK) cell.classList.add("today");
+      var num = document.createElement("div");
+      num.className = "cal-num";
+      num.textContent = d.getDate();
+      cell.appendChild(num);
+
+      var localDay = byDate[keyOf(d)] || [];
+      var ocDay = ocByDate[keyOf(d)] || [];
+      var courseDay = PortalSchedule.forDate(d);
+      var scheduleInfo = PortalSchedule.info(d);
+      var shown = 0, courseIdx = 0, ocIdx = 0;
+      if (scheduleInfo.label) {
+        var note = document.createElement("div");
+        note.className = "cal-note";
+        note.textContent = scheduleInfo.label;
+        cell.appendChild(note);
+      }
+      while (shown < 5 && courseIdx < courseDay.length) {
+        var course = courseDay[courseIdx++];
+        var courseChip = document.createElement("div");
+        courseChip.className = "cal-task course";
+        courseChip.textContent = course.periods + "节 · " + course.name;
+        courseChip.title = course.location + " · " + course.teacher;
+        cell.appendChild(courseChip);
+        shown++;
+      }
+      while (shown < 5 && ocIdx < ocDay.length) {
+        var ot = ocDay[ocIdx++];
+        var chip = document.createElement("a");
+        chip.className = "cal-task oc" + (ot.submitted ? " done" : (ocOverdueOn(ot, keyOf(d)) ? " overdue" : ""));
+        chip.href = ot.url || PortalSite.get("canvas.base_url", "#");
+        chip.target = "_blank";
+        chip.rel = "noopener noreferrer";
+        chip.innerHTML = '<span class="oc-glyph">🎓</span><span class="cal-item-text">' + escCal(ot.title) + "</span>";
+        chip.title = PortalCanvas.kindLabel(ot) + (ot.course ? " · " + ot.course : "") + " · " + ot.title;
+        cell.appendChild(chip);
+        shown++;
+      }
+      localDay.slice(0, 5 - shown).forEach(function (t) {
+        var tag = document.createElement("div");
+        tag.className = "cal-task" + (t.done ? " done" : "");
+        tag.textContent = t.text;
+        tag.title = t.text;
+        cell.appendChild(tag);
+        shown++;
+      });
+      var total = courseDay.length + localDay.length + ocDay.length;
+      if (total > 5) {
+        var more = document.createElement("div");
+        more.className = "cal-task";
+        more.style.background = "transparent";
+        more.textContent = "还有 " + (total - 5) + " 项…";
+        cell.appendChild(more);
+      }
+
+      cell.addEventListener("click", function (dd) {
+        return function () { selected = dd; renderDay(); };
+      }(d));
+      grid.appendChild(cell);
+    }
+    renderDay();
+  }
+
+  function escCal(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function ocOverdueOn(t, dateKey) {
+    if (t.submitted) return false;
+    return t.kind === "missing" ||
+      (dateKey < keyOf(new Date()) && t.kind === "assignment") ||
+      (dateKey < keyOf(new Date()) && t.kind === "planner" && t.plannable_type === "assignment");
+  }
+
+  function ocDayRow(t, overdue) {
+    var label = PortalCanvas.kindLabel(t);
+    var row = document.createElement("div");
+    row.className = "task-row canvas" + (overdue ? " overdue" : "") + (t.submitted ? " done" : "");
+    var link = document.createElement("a");
+    link.className = "task-link";
+    link.href = t.url || PortalSite.get("canvas.base_url", "#");
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    var tagCls = "oc-tag" + ((t.kind === "missing" || overdue) ? " missing" : "")
+      + (t.plannable_type === "announcement" ? " announcement" : "");
+    link.innerHTML =
+      '<span class="' + tagCls + '">' + label + "</span>" +
+      '<span class="oc-title">' + escCal(t.title) + "</span>" +
+      (t.course ? '<span class="oc-course">' + escCal(t.course) + "</span>" : "") +
+      '<span class="oc-due' + (overdue ? " overdue" : "") + '">🎓 Canvas</span>';
+    row.appendChild(link);
+    return row;
+  }
+
+  function renderDay() {
+    var k = keyOf(selected);
+    var todayK = keyOf(new Date());
+    document.getElementById("dayTitle").textContent =
+      k === todayK ? "今天的安排" : (selected.getMonth() + 1) + " 月 " + selected.getDate() + " 日的安排";
+    var courseBox = document.getElementById("dayCourses");
+    courseBox.innerHTML = "";
+    var info = PortalSchedule.info(selected);
+    var courses = PortalSchedule.forDate(selected);
+    if (info.label) {
+      var notice = document.createElement("div");
+      notice.className = "schedule-note";
+      notice.textContent = info.label;
+      courseBox.appendChild(notice);
+    }
+    courses.forEach(function (course) {
+      var row = document.createElement("div");
+      row.className = "course-row";
+      row.innerHTML = '<div class="course-period">' + course.periods + ' 节</div>' +
+        '<div class="course-main"><div class="course-name">' + escCal(course.name) + '</div>' +
+        '<div class="course-meta">' + escCal(course.teacher) + ' · ' + escCal(course.class_code) + '</div></div>' +
+        '<div class="course-location">' + escCal(course.location) + '</div>';
+      courseBox.appendChild(row);
+    });
+    if (courses.length) {
+      var sep = document.createElement("div");
+      sep.className = "task-sep";
+      sep.textContent = "任务与 Canvas";
+      courseBox.appendChild(sep);
+    }
+    var box = document.getElementById("dayTasks");
+    box.innerHTML = "";
+
+    // Canvas 项（只读，按截止日期展示；历史任务不重复堆到今天）
+    var ocToday = ocByDate[k] || [];
+    ocToday.forEach(function (t) { box.appendChild(ocDayRow(t, ocOverdueOn(t, k))); });
+
+    // 本地任务
+    var tasks = PortalTasks.load().filter(function (t) {
+      return t.date === k && !PortalTasks.archived("local:" + t.id, t.done, t.archived);
+    });
+    var ocCount = ocToday.length;
+    if (!tasks.length && !ocCount) {
+      box.innerHTML = '<div class="mail-empty">这一天没有任务</div>';
+    }
+    tasks.forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "task-row" + (t.done ? " done" : "");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = t.done;
+      cb.addEventListener("change", function () {
+        var all = PortalTasks.load();
+        var target = all.find(function (x) { return x.id === t.id; });
+        if (target) {
+          target.done = cb.checked;
+          if (cb.checked) target.archived = true;
+        }
+        PortalTasks.save(all);
+        render();
+      });
+      var span = document.createElement("span");
+      span.className = "task-text";
+      span.textContent = t.text;
+      var del = document.createElement("button");
+      del.className = "task-del";
+      del.textContent = "✕";
+      del.addEventListener("click", function () {
+        PortalTasks.save(PortalTasks.load().filter(function (x) { return x.id !== t.id; }));
+        render();
+      });
+      row.appendChild(cb); row.appendChild(span); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  document.getElementById("taskForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("taskInput");
+    var text = input.value.trim();
+    if (!text) return;
+    var all = PortalTasks.load();
+    all.push({
+      id: "t" + Date.now() + Math.random().toString(36).slice(2, 6),
+      date: keyOf(selected), text: text, done: false
+    });
+    PortalTasks.save(all);
+    input.value = "";
+    render();
+  });
+  document.getElementById("prev").addEventListener("click", function () {
+    view = monthExpanded
+      ? new Date(view.getFullYear(), view.getMonth() - 1, 1)
+      : new Date(view.getFullYear(), view.getMonth(), view.getDate() - 7);
+    selected = new Date(view);
+    render();
+  });
+  document.getElementById("next").addEventListener("click", function () {
+    view = monthExpanded
+      ? new Date(view.getFullYear(), view.getMonth() + 1, 1)
+      : new Date(view.getFullYear(), view.getMonth(), view.getDate() + 7);
+    selected = new Date(view);
+    render();
+  });
+  document.getElementById("viewMode").addEventListener("click", function () {
+    monthExpanded = !monthExpanded;
+    view = new Date(selected);
+    render();
+  });
+  document.getElementById("today").addEventListener("click", function () {
+    view = new Date();
+    selected = new Date();
+    render();
+  });
+
+  Promise.all([PortalCanvas.load(), PortalSchedule.load()]).then(function () {
+    indexCanvas(PortalCanvas.cache().tasks);
+    render();
+  });
+  setInterval(function () {
+    PortalCanvas.load(false).then(function () {
+      indexCanvas(PortalCanvas.cache().tasks);
+      render();
+    });
+  }, 10 * 60 * 1000);
+  window.addEventListener("storage", function () {
+    indexCanvas(PortalCanvas.cache().tasks);
+    render();
+  });
+})();
+</script>
+</body>
+</html>

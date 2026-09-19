@@ -1,0 +1,23 @@
+# Canvas LMS 访问令牌配置（示例）
+#
+# 如何生成 Access Token（不需要统一身份认证密码）：
+#   1. 浏览器登录你学校的 Canvas
+#   2. 左下角「账户」→「设置」（<base_url>/profile/settings）
+#   3. 在「已批准的整合 / Approved Integrations」区域点「+ 新建访问令牌 / + New Access Token」
+#   4. 用途填 home-portal，到期日可留空（或设一个学期），生成后复制令牌
+#   5. cp 本文件为 canvas.yml，chmod 600，把令牌填到 token 后
+#
+# 注意：令牌等同你的 Canvas 账号权限，请勿泄露；可随时在同一页面吊销。
+# 保存后无需重启服务，后端每 10 分钟自动重新读取。
+
+base_url: https://canvas.example.edu
+token: 在此粘贴你的Access_Token
+
+# 抓取范围开关（默认全开）
+fetch_todo: true              # 待办（待提交作业 / 待评分反馈）
+fetch_planner: true           # Planner 日程（按日期进入日历）
+fetch_missing: true           # 逾期未交
+fetch_assignments: true       # 所有学期课程的全部作业（Tasks 页数据源）
+fetch_conversations: true     # Canvas 站内信（主页邮箱卡片底部显示未读）
+planner_days: 400             # planner 向未来抓取天数
+planner_back_days: 400        # planner 向过去抓取天数

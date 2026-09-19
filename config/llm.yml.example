@@ -1,0 +1,6 @@
+# 复制为 llm.yml 并填入 OpenAI 兼容接口凭证
+# enabled: false 时完全使用关键词/发件人规则
+enabled: true
+base_url: https://api.openai.com/v1
+api_key: sk-在此填入
+model: gpt-4o-mini

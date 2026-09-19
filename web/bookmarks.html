@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bookmarks · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <style>
+    .add-row { display:flex; gap:8px; }
+    input.f { width:100%; border:1px solid var(--line-strong); border-radius:var(--radius-sm); padding:6px 10px;
+      font-size:13.5px; font-family:inherit; background:rgba(255,255,255,.85); color:var(--ink); min-width:0; }
+    .btn { border:1px solid var(--line-strong); background:#fff; border-radius:var(--radius-sm); padding:5px 14px;
+      font-size:13px; cursor:pointer; color:var(--ink); white-space:nowrap; }
+    .btn:hover { background:var(--bg-hover); }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn.primary:hover { background:var(--accent-ink); }
+    .btn.danger { color:var(--bad); }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .toolbar { display:flex; align-items:center; gap:10px; margin:16px 0 6px; }
+    .toolbar .count { color:var(--ink-3); font-size:12.5px; white-space:nowrap; }
+    .group-head { margin:14px 2px 4px; font-size:12px; font-weight:600; color:var(--ink-2); display:flex; align-items:center; gap:8px; }
+    .group-head::after { content:""; flex:1; height:1px; background:var(--line); }
+
+    .bm { display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:10px; align-items:center;
+      padding:8px 6px; border-bottom:1px solid var(--line); border-radius:var(--radius-sm); }
+    .bm:last-child { border-bottom:none; }
+    .bm:hover { background:var(--bg-hover); }
+    .bm.flash { background:var(--accent-soft); }
+    .bm-icon { width:24px; height:24px; border-radius:6px; object-fit:contain; background:#fff; }
+    .bm-letter { width:24px; height:24px; border-radius:6px; display:grid; place-items:center; font-size:12px;
+      font-weight:700; color:#fff; background:var(--accent); }
+    .bm-title { font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+    .bm-title:hover { color:var(--accent-ink); }
+    .bm-meta { font-size:12px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .bm-note { font-size:12px; color:var(--ink-2); margin-top:1px; overflow-wrap:anywhere; }
+    .bm-actions { display:flex; gap:2px; opacity:0; transition:opacity .12s; }
+    .bm:hover .bm-actions, .bm:focus-within .bm-actions { opacity:1; }
+    .bm-actions button { border:0; background:transparent; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:13px; }
+    .bm-actions button:hover { background:rgba(0,0,0,.06); }
+    .bm-actions button.on { opacity:1; }
+    .pin-mark { color:var(--accent-ink); font-size:11px; margin-left:4px; }
+
+    .bookmarklet { display:inline-block; padding:5px 12px; border-radius:999px; background:var(--ink); color:#fff !important;
+      font-size:13px; cursor:grab; margin:6px 0; }
+    .help { font-size:12.5px; color:var(--ink-2); line-height:1.7; }
+    .help code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; background:var(--bg-hover); padding:1px 4px; border-radius:3px; word-break:break-all; }
+
+    .modal-backdrop { position:fixed; inset:0; z-index:1000; display:none; place-items:center; padding:20px;
+      background:rgba(20,24,34,.42); backdrop-filter:blur(6px); }
+    .modal-backdrop.show { display:grid; }
+    .modal { width:min(520px,100%); border-radius:14px; background:rgba(255,255,255,.96);
+      box-shadow:0 24px 70px rgba(0,0,0,.28); padding:18px; }
+    .modal h2 { margin:0 0 12px; font-size:17px; }
+    .modal label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--ink-2); margin-bottom:10px; }
+    .modal-foot { display:flex; gap:8px; align-items:center; }
+    .modal-foot .spacer { flex:1; }
+    .error-box { color:var(--bad); background:var(--bad-bg); border-radius:var(--radius-sm); padding:6px 10px; font-size:13px; margin-bottom:10px; display:none; }
+
+    /* 小书签弹窗模式：只显示保存结果 */
+    body.popup .app { display:none; }
+    .popup-card { display:none; }
+    body.popup .popup-card { display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; }
+    .popup-card .box { background:rgba(255,255,255,.92); border-radius:14px; padding:22px 26px; max-width:420px;
+      box-shadow:0 12px 40px rgba(0,0,0,.18); }
+    .popup-card .big { font-size:34px; }
+    .popup-card .t { font-weight:600; margin-top:6px; overflow-wrap:anywhere; }
+    .popup-card .s { color:var(--ink-3); font-size:12.5px; margin-top:4px; }
+
+    @media (max-width:820px) {
+      .bm-actions { opacity:1; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Bookmarks</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji">🔖</div>
+        <div class="page-head-text">
+          <h1 class="page-title">Bookmarks</h1>
+          <div class="page-meta"><span>只存链接，不做归档和分类；添加时自动抓取标题和图标</span></div>
+        </div>
+      </header>
+
+      <div class="card">
+        <form class="add-row" id="addForm" autocomplete="off">
+          <input class="f" id="addUrl" type="text" inputmode="url" placeholder="粘贴链接，回车收藏…" maxlength="2000" required>
+          <button class="btn primary" type="submit" id="addBtn">收藏</button>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <input class="f" id="q" type="text" placeholder="搜索标题 / 网址 / 备注…">
+        <span class="count" id="count"></span>
+      </div>
+
+      <div class="card"><div id="list"><div class="mail-empty">正在加载…</div></div></div>
+
+      <h2 class="h">⭐ 一键收藏按钮</h2>
+      <div class="card help">
+        <div>把下面这个按钮<strong>拖到浏览器书签栏</strong>。在任意网页点它，就会弹出小窗保存当前页，保存后自动关闭：</div>
+        <a class="bookmarklet" id="bookmarklet" title="拖到书签栏">⭐ 收藏到 Nova</a>
+        <div>手机上可以用快捷指令 / 分享菜单打开：<code id="shareUrl"></code>（把 <code>{url}</code> 换成要收藏的链接）</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="popup-card"><div class="box">
+  <div class="big" id="popupIcon">⏳</div>
+  <div class="t" id="popupTitle">正在收藏…</div>
+  <div class="s" id="popupSub"></div>
+</div></div>
+
+<div class="modal-backdrop" id="editModal">
+  <form class="modal" id="editForm" role="dialog" aria-modal="true" aria-labelledby="editTitle" autocomplete="off">
+    <h2 id="editTitle">编辑收藏</h2>
+    <div class="error-box" id="editError"></div>
+    <label>标题<input class="f" name="title" maxlength="300" required></label>
+    <label>链接<input class="f" name="url" maxlength="2000" required></label>
+    <label>备注<input class="f" name="note" maxlength="500" placeholder="可选"></label>
+    <div class="modal-foot">
+      <button type="button" class="btn danger" id="editDelete">删除</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</div>
+
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+(function () {
+  var JSON_HEADERS = { "Content-Type": "application/json" };
+  var params = new URLSearchParams(location.search);
+  var isPopup = params.get("popup") === "1";
+  var items = [], query = "", editing = null, flashId = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function request(url, options) {
+    return fetch(url, options).then(function (response) {
+      return response.json().then(function (d) { return d; }, function () { return null; }).then(function (data) {
+        if (!response.ok || !data) {
+          throw new Error((data && data.error) || (response.ok ? "服务器返回了非预期内容，登录可能已过期，请刷新页面" : "请求失败（HTTP " + response.status + "）"));
+        }
+        return data;
+      });
+    });
+  }
+  function send(method, url, body) {
+    return request(url, { method: method, headers: JSON_HEADERS, body: body ? JSON.stringify(body) : undefined });
+  }
+  function add(url, title) { return send("POST", "/api/bookmarks", { url: url, title: title || "" }); }
+
+  // ---------- 小书签弹窗 / ?add= 直达
+  if (params.get("add")) {
+    var target = params.get("add"), pageTitle = params.get("title") || "";
+    history.replaceState(null, "", location.pathname);
+    if (isPopup) {
+      document.body.classList.add("popup");
+      add(target, pageTitle).then(function (r) {
+        $("popupIcon").textContent = r.created ? "✅" : "📌";
+        $("popupTitle").textContent = r.bookmark.title;
+        $("popupSub").textContent = r.created ? "已收藏 · 窗口即将关闭" : "之前已经收藏过 · 窗口即将关闭";
+        setTimeout(function () { window.close(); }, 1300);
+      }).catch(function (e) {
+        $("popupIcon").textContent = "⚠️";
+        $("popupTitle").textContent = "收藏失败";
+        $("popupSub").textContent = e.message;
+      });
+      return;
+    }
+    add(target, pageTitle).then(function (r) {
+      portalToast(r.created ? "已收藏：" + r.bookmark.title : "之前已经收藏过");
+      flashId = r.bookmark.id;
+      load();
+    }).catch(function (e) { portalToast("收藏失败：" + e.message); });
+  }
+
+  PortalLayout.mount({ active: "bookmarks", rail: false });
+
+  // ---------- 列表
+  function load() {
+    return request("/api/bookmarks", { cache: "no-store" }).then(function (d) {
+      items = d.bookmarks; render();
+    }).catch(function (e) {
+      $("list").innerHTML = '<div class="mail-empty" style="color:var(--bad)">加载失败：' + esc(e.message) + "</div>";
+    });
+  }
+
+  function dateText(iso) {
+    var d = new Date(iso), now = new Date();
+    return (d.getFullYear() !== now.getFullYear() ? d.getFullYear() + "/" : "") + (d.getMonth() + 1) + "/" + d.getDate();
+  }
+
+  function matches(b) {
+    if (!query) return true;
+    return (b.title + " " + b.url + " " + (b.note || "") + " " + (b.description || "")).toLowerCase().indexOf(query) !== -1;
+  }
+
+  function iconNode(b) {
+    var letter = document.createElement("span");
+    letter.className = "bm-letter";
+    letter.textContent = (b.title || b.domain || "?").trim().charAt(0).toUpperCase();
+    if (!b.icon) return letter;
+    var img = document.createElement("img");
+    img.className = "bm-icon"; img.alt = ""; img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    img.src = b.icon;
+    img.addEventListener("error", function () { img.replaceWith(letter); });
+    return img;
+  }
+
+  function row(b) {
+    var el = document.createElement("div");
+    el.className = "bm" + (b.id === flashId ? " flash" : "");
+    el.appendChild(iconNode(b));
+    var main = document.createElement("div");
+    main.style.minWidth = "0";
+    main.innerHTML =
+      '<a class="bm-title" href="' + esc(b.url) + '" target="_blank" rel="noopener noreferrer" title="' + esc(b.title) + '">' + esc(b.title) + "</a>" +
+      '<div class="bm-meta">' + esc(b.domain) + " · " + dateText(b.created_at) + (b.description ? " · " + esc(b.description) : "") + "</div>" +
+      (b.note ? '<div class="bm-note">📝 ' + esc(b.note) + "</div>" : "");
+    el.appendChild(main);
+    var actions = document.createElement("div");
+    actions.className = "bm-actions";
+    [["📌", b.pinned ? "取消置顶" : "置顶", function () { togglePin(b); }],
+     ["↻", "重新抓取标题和图标", function () { refetch(b); }],
+     ["✏️", "编辑", function () { openEdit(b); }]].forEach(function (a) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.textContent = a[0]; btn.title = a[1];
+      if (a[0] === "📌" && b.pinned) btn.style.background = "var(--accent-soft)";
+      btn.addEventListener("click", a[2]);
+      actions.appendChild(btn);
+    });
+    el.appendChild(actions);
+    return el;
+  }
+
+  function render() {
+    var list = $("list");
+    var shown = items.filter(matches);
+    $("count").textContent = query ? shown.length + " / " + items.length + " 条" : items.length + " 条";
+    list.innerHTML = "";
+    if (!items.length) { list.innerHTML = '<div class="mail-empty">还没有收藏，在上面粘贴一个链接试试</div>'; return; }
+    if (!shown.length) { list.innerHTML = '<div class="mail-empty">没有匹配的收藏</div>'; return; }
+    var pinned = shown.filter(function (b) { return b.pinned; });
+    var rest = shown.filter(function (b) { return !b.pinned; });
+    if (pinned.length) {
+      list.appendChild(groupHead("📌 置顶"));
+      pinned.forEach(function (b) { list.appendChild(row(b)); });
+      if (rest.length) list.appendChild(groupHead("全部"));
+    }
+    rest.forEach(function (b) { list.appendChild(row(b)); });
+    flashId = null;
+  }
+  function groupHead(text) {
+    var h = document.createElement("div");
+    h.className = "group-head"; h.textContent = text;
+    return h;
+  }
+
+  function replaceItem(b) {
+    var i = items.findIndex(function (x) { return x.id === b.id; });
+    if (i !== -1) items[i] = b;
+    render();
+  }
+  function togglePin(b) {
+    send("PUT", "/api/bookmarks/" + b.id, { pinned: !b.pinned }).then(replaceItem)
+      .catch(function (e) { portalToast(e.message); });
+  }
+  function refetch(b) {
+    portalToast("正在重新抓取…");
+    send("POST", "/api/bookmarks/" + b.id + "/refresh").then(function (r) { replaceItem(r); portalToast("已更新"); })
+      .catch(function (e) { portalToast(e.message); });
+  }
+
+  // ---------- 添加
+  $("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var url = $("addUrl").value.trim();
+    if (!url) return;
+    $("addBtn").disabled = true; $("addBtn").textContent = "抓取中…";
+    add(url).then(function (r) {
+      $("addUrl").value = "";
+      portalToast(r.created ? "已收藏：" + r.bookmark.title : "之前已经收藏过");
+      flashId = r.bookmark.id;
+      return load();
+    }).catch(function (err) { portalToast("收藏失败：" + err.message); })
+      .then(function () { $("addBtn").disabled = false; $("addBtn").textContent = "收藏"; $("addUrl").focus(); });
+  });
+  $("q").addEventListener("input", function (e) { query = e.target.value.trim().toLowerCase(); render(); });
+
+  // ---------- 编辑
+  var form = $("editForm");
+  function openEdit(b) {
+    editing = b;
+    form.elements.title.value = b.title; form.elements.url.value = b.url; form.elements.note.value = b.note || "";
+    $("editError").style.display = "none";
+    $("editModal").classList.add("show");
+    form.elements.title.focus();
+  }
+  function closeEdit() { $("editModal").classList.remove("show"); }
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    send("PUT", "/api/bookmarks/" + editing.id, {
+      title: form.elements.title.value, url: form.elements.url.value, note: form.elements.note.value
+    }).then(function (b) { closeEdit(); replaceItem(b); portalToast("已保存"); })
+      .catch(function (err) { $("editError").textContent = err.message; $("editError").style.display = "block"; });
+  });
+  $("editDelete").addEventListener("click", function () {
+    var target = editing;
+    if (!target) return;
+    PortalDialog.confirm({ danger: true, title: "删除这条收藏？", message: "「" + target.title + "」", confirmText: "删除" }).then(function (ok) {
+      if (!ok) return;
+      send("DELETE", "/api/bookmarks/" + target.id).then(function () {
+        items = items.filter(function (x) { return x.id !== target.id; });
+        closeEdit(); render(); portalToast("已删除");
+      }).catch(function (err) { $("editError").textContent = err.message; $("editError").style.display = "block"; });
+    });
+  });
+  document.querySelector("[data-close]").addEventListener("click", closeEdit);
+  $("editModal").addEventListener("click", function (e) { if (e.target === $("editModal")) closeEdit(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeEdit(); });
+
+  // ---------- 小书签
+  var base = location.origin + "/bookmarks.html";
+  $("bookmarklet").href = "javascript:(function(){var u='" + base +
+    "?popup=1&add='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);" +
+    "var w=window.open(u,'nova_bm','width=460,height=260');if(!w)location.href=u;})()";
+  $("bookmarklet").addEventListener("click", function (e) { e.preventDefault(); portalToast("请把按钮拖到书签栏，在别的网页上点"); });
+  $("shareUrl").textContent = base + "?add={url}";
+
+  load();
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") load(); });
+})();
+</script>
+</body>
+</html>

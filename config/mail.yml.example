@@ -1,0 +1,42 @@
+# home-portal 多邮箱 IMAP 配置（示例，所有值都是占位符）
+#
+# 用法：
+#   cp config/mail.yml.example config/mail.yml && chmod 600 config/mail.yml
+#   填入邮箱地址与「授权码 / App Password」（不是网页登录密码！）：
+#     QQ 邮箱：设置 → 账号 → POP3/IMAP 服务 → 生成授权码
+#     Gmail：Google 账号 → 安全 → 两步验证 → 应用专用密码
+#     自建邮箱：本机 IMAP 可用 127.0.0.1 + STARTTLS（ssl: false）
+#   保存后无需重启：后端每 5 分钟自动重新读取本文件。
+#
+# 「重要」判定：优先交给 config/llm.yml 配置的 LLM 审查；LLM 不可用时退回规则：
+#   发件地址包含 important_senders 或 主题包含 important_keywords（忽略大小写）。
+# unimportant_senders（子串匹配）一律视为不重要，且不调用 LLM。
+
+accounts:
+  - name: 主邮箱
+    email: you@example.com
+    imap_host: 127.0.0.1
+    imap_port: 143
+    ssl: false                # false = 明文连接后 STARTTLS；公网服务器请用 993 + true
+    username: you@example.com
+    password: 在此填入授权码
+    webmail: https://mail.example.com/
+    # 在 Webmail/客户端读过的邮件约 30 秒内从主页移除
+    auto_remove_read: true
+    unimportant_senders:
+      - newsletter@example.com
+    important_senders:
+    important_keywords:
+      - 账单
+      - 逾期
+      - billing
+
+  - name: Gmail
+    email: someone@gmail.com
+    imap_host: imap.gmail.com
+    imap_port: 993
+    username: someone@gmail.com
+    password: 在此填入应用专用密码
+    webmail: https://mail.google.com/
+    important_senders:
+    important_keywords:

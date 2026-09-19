@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings · Nova Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
+  <link rel="stylesheet" href="/assets/app.css?v=21">
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Nova Workspace</span><span>System</span><span>Settings</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji">⚙️</div>
+        <div class="page-head-text">
+          <h1 class="page-title">Settings</h1>
+          <div class="page-meta"><span>门户与数据来源</span></div>
+        </div>
+      </header>
+
+      <h2 class="h">🔗 快捷入口</h2>
+      <div class="card" id="quickLinks"></div>
+
+      <h2 class="h">📬 邮箱</h2>
+      <div class="card">
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.7">
+          支持多个邮箱 IMAP 聚合（QQ / Gmail / 自建邮箱等）。凭证文件：
+          <code style="font-family:ui-monospace,Menlo,monospace;background:var(--bg-soft);padding:1px 5px;border-radius:3px">config/mail.yml</code><br>
+          从 <code style="font-family:ui-monospace,Menlo,monospace">mail.yml.example</code> 复制并填入授权码即可，无需重启，5 分钟内生效。
+        </div>
+      </div>
+
+      <h2 class="h">🧹 本地数据</h2>
+      <div class="card">
+        <div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">任务数据保存在当前浏览器（localStorage），与 Calendar 共享。</div>
+        <button class="plus-btn" id="clearTasks" style="border:1px solid var(--line-strong);border-radius:4px;padding:4px 12px;font-size:13px;color:var(--bad)">清空本机任务</button>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=31"></script>
+<script>
+PortalLayout.mount({ active: "settings", rail: false });
+// 快捷入口来自 config/site.json 的 settings_links
+(function () {
+  var box = document.getElementById("quickLinks");
+  var links = PortalSite.get("settings_links", []);
+  if (!links.length) { box.innerHTML = '<div class="mail-empty">在 config/site.json 的 settings_links 里添加</div>'; return; }
+  links.forEach(function (l) {
+    var row = document.createElement("div");
+    row.className = "task-row";
+    var icon = document.createElement("span"); icon.className = "nav-icon"; icon.textContent = l.icon || "🔗";
+    var a = document.createElement("a"); a.href = l.href; a.target = "_blank"; a.rel = "noopener";
+    a.style.color = "var(--accent-ink)"; a.textContent = l.label + " ↗";
+    row.appendChild(icon); row.appendChild(a); box.appendChild(row);
+  });
+})();
+document.getElementById("clearTasks").addEventListener("click", function () {
+  PortalDialog.confirm({ danger: true, title: "清空本地任务？", message: "会删除这个浏览器里保存的所有本地任务，Canvas 任务不受影响。", confirmText: "清空" }).then(function (ok) {
+    if (!ok) return;
+    localStorage.removeItem("nova.tasks.v1");
+    localStorage.removeItem("nova.tasks.seeded.v1");
+    portalToast("已清空");
+  });
+});
+</script>
+</body>
+</html>
