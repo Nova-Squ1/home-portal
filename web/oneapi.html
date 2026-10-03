@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OneAPI · Nova Workspace</title>
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
+  <style>
+    .oa-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0 4px; }
+    .oa-kpi { border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; background:rgba(255,255,255,.55); }
+    .oa-kpi b { display:block; font-size:22px; font-weight:650; color:var(--ink); line-height:1.2; }
+    .oa-kpi span { font-size:12px; color:var(--ink-3); }
+    .oa-filter { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 2px; }
+    .oa-filter button { border:1px solid var(--line-strong); background:transparent; color:var(--ink-2); border-radius:999px;
+      padding:4px 12px; font-size:12.5px; cursor:pointer; font-family:inherit; }
+    .oa-filter button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .oa-note { font-size:12.5px; color:var(--ink-3); margin:6px 2px 0; line-height:1.6; }
+
+    .oa-item { display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; padding:12px 4px; border-bottom:1px solid var(--line); }
+    .oa-item:last-child { border-bottom:none; }
+    .oa-emoji { font-size:22px; line-height:34px; text-align:center; }
+    .oa-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
+    .oa-name { font-weight:600; font-size:14.5px; color:var(--ink); }
+    .oa-badge { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); white-space:nowrap; }
+    .oa-status { font-size:11px; padding:1px 8px; border-radius:999px; white-space:nowrap; }
+    .oa-status.ok { background:var(--good-bg); color:var(--good); }
+    .oa-status.warn { background:var(--warn-bg); color:var(--warn); }
+    .oa-status.off { background:var(--bg-hover); color:var(--ink-3); }
+    .oa-endpoint { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; color:var(--ink-2); margin-top:3px; overflow-wrap:anywhere; }
+    .oa-models { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+    .oa-models code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; background:var(--bg-hover); padding:1px 6px; border-radius:4px; }
+    .oa-uses { margin:6px 0 0; padding-left:18px; font-size:13px; color:var(--ink); line-height:1.65; }
+    .oa-meta { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:6px; font-size:12px; color:var(--ink-3); }
+    .oa-meta code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; overflow-wrap:anywhere; }
+    .oa-cred.ok { color:var(--good); }
+    .oa-cred.bad { color:var(--bad); }
+    .oa-empty { color:var(--ink-3); font-size:13px; padding:8px 4px; }
+    @media (max-width:820px) { .oa-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (prefers-color-scheme: dark) { .oa-kpi { background:rgba(44,44,46,.55); } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Private</span><span>OneAPI</span></div>
+      <div class="topbar-spacer"></div>
+    </div>
+    <div class="page narrow">
+      <header class="page-head">
+        <div class="page-emoji page-emoji-svg" data-icon="plug"></div>
+        <div class="page-head-text">
+          <h1 class="page-title">OneAPI</h1>
+          <div class="page-meta"><span>服务器上的订阅与 API：谁付费、用在哪、凭据在不在</span><span id="oaUpdated"></span></div>
+        </div>
+      </header>
+
+      <div class="oa-kpis" id="oaKpis"></div>
+      <div class="oa-filter" id="oaFilter"></div>
+      <div class="oa-note" id="oaNote"></div>
+      <div id="oaGroups"></div>
+    </div>
+  </main>
+</div>
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=55"></script>
+<script>
+PortalLayout.mount({ active: "oneapi", rail: false });
+(function () {
+  var data = null, filter = "all";
+  var FILTERS = [["all", "全部"], ["订阅", "💳 订阅"], ["按量", "🧾 按量"], ["free", "🆓 免费 / 自建"]];
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function match(item) {
+    if (filter === "all") return true;
+    if (filter === "free") return item.kind === "免费" || item.kind === "自建";
+    return item.kind === filter;
+  }
+  function allItems() {
+    return (data.groups || []).reduce(function (a, g) { return a.concat(g.items || []); }, []);
+  }
+
+  function renderKpis() {
+    var items = allItems();
+    function count(fn) { return items.filter(fn).length; }
+    var withCred = items.filter(function (i) { return i.credential_ok !== null && i.credential_ok !== undefined; });
+    var kpis = [
+      [count(function (i) { return i.kind === "订阅"; }), "包月订阅"],
+      [count(function (i) { return i.kind === "按量"; }), "按量付费"],
+      [count(function (i) { return i.status === "ok"; }) + " / " + items.length, "正常在用"],
+      [withCred.filter(function (i) { return i.credential_ok; }).length + " / " + withCred.length, "凭据在位"]
+    ];
+    $("oaKpis").innerHTML = kpis.map(function (k) {
+      return '<div class="oa-kpi"><b>' + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>";
+    }).join("");
+  }
+
+  function renderFilter() {
+    $("oaFilter").innerHTML = FILTERS.map(function (f) {
+      return '<button type="button" data-f="' + esc(f[0]) + '" class="' + (f[0] === filter ? "on" : "") + '">' + esc(f[1]) + "</button>";
+    }).join("");
+  }
+
+  function renderItem(i) {
+    var cred = i.credential || {};
+    var credHtml = "";
+    if (cred.file) {
+      var ok = i.credential_ok;
+      credHtml = '<span class="oa-cred ' + (ok ? "ok" : "bad") + '">' + (ok ? "✓ 凭据在位" : "✗ 凭据缺失") + "</span>" +
+        "<span>🔑 <code>" + esc(cred.file) + (cred.var ? " · " + esc(cred.var) : "") + "</code></span>";
+    } else {
+      credHtml = "<span>🔓 无需凭据</span>";
+    }
+    return '<div class="oa-item">' +
+      '<div class="oa-emoji">' + esc(i.emoji || "🔌") + "</div>" +
+      "<div>" +
+        '<div class="oa-head"><span class="oa-name">' + esc(i.name) + "</span>" +
+          '<span class="oa-badge">' + esc(i.kind) + "</span>" +
+          '<span class="oa-status ' + esc(i.status) + '">' + esc(i.status_text || i.status) + "</span></div>" +
+        (i.endpoint ? '<div class="oa-endpoint">' + esc(i.endpoint) + "</div>" : "") +
+        ((i.models || []).length ? '<div class="oa-models">' + i.models.map(function (m) { return "<code>" + esc(m) + "</code>"; }).join("") + "</div>" : "") +
+        '<ul class="oa-uses">' + (i.uses || []).map(function (u) { return "<li>" + esc(u) + "</li>"; }).join("") + "</ul>" +
+        '<div class="oa-meta">' + credHtml + (i.note ? "<span>💡 " + esc(i.note) + "</span>" : "") + "</div>" +
+      "</div></div>";
+  }
+
+  function renderGroups() {
+    var html = (data.groups || []).map(function (g) {
+      var items = (g.items || []).filter(match);
+      if (!items.length) return "";
+      return '<h2 class="h">' + esc(g.emoji || "") + " " + esc(g.title) + "</h2>" +
+        '<div class="card">' + items.map(renderItem).join("") + "</div>";
+    }).join("");
+    $("oaGroups").innerHTML = html || '<div class="card"><div class="oa-empty">这个筛选下没有条目</div></div>';
+  }
+
+  $("oaFilter").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-f]");
+    if (!b) return;
+    filter = b.getAttribute("data-f");
+    renderFilter();
+    renderGroups();
+  });
+
+  fetch("/api/oneapi", { cache: "no-store" }).then(function (r) {
+    return r.json().then(function (d) {
+      if (!r.ok) throw new Error((d && d.error) || "HTTP " + r.status);
+      return d;
+    });
+  }).then(function (d) {
+    data = d;
+    $("oaUpdated").textContent = d.updated ? "台账核对 " + d.updated : "";
+    $("oaNote").textContent = d.note || "";
+    renderKpis();
+    renderFilter();
+    renderGroups();
+  }).catch(function (e) {
+    $("oaGroups").innerHTML = '<div class="card"><div class="oa-empty">读取失败：' + esc(e.message) + "</div></div>";
+  });
+})();
+</script>
+</body>
+</html>

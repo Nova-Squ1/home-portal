@@ -1,0 +1,4 @@
+镶金黑石材质（gilded_blackstone）来自 Faithful 32x（Java 版，java-latest 分支）。
+Faithful Resource Pack — https://faithfulpack.net
+许可：Faithful License v4 — https://faithfulpack.net/license
+门户图标由 /opt/home-portal/make_icons.py 用这张材质渲染成等轴测方块生成。

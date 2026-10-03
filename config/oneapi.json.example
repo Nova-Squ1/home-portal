@@ -1,0 +1,31 @@
+{
+  "updated": "YYYY-MM-DD",
+  "note": "订阅/API 台账；只记凭据位置，不记内容。",
+  "groups": [
+    {
+      "title": "LLM 包月订阅",
+      "emoji": "💳",
+      "items": [
+        {
+          "emoji": "🧠",
+          "name": "示例订阅",
+          "kind": "订阅",
+          "status": "ok",
+          "status_text": "主力",
+          "endpoint": "https://api.example.com/v1",
+          "models": [
+            "model-name"
+          ],
+          "credential": {
+            "file": "/path/to/.env",
+            "var": "EXAMPLE_API_KEY"
+          },
+          "uses": [
+            "用在哪个服务、做什么"
+          ],
+          "note": "可选备注"
+        }
+      ]
+    }
+  ]
+}

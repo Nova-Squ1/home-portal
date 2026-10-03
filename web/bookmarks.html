@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bookmarks · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
   <style>
     .add-row { display:flex; gap:8px; }
     input.f { width:100%; border:1px solid var(--line-strong); border-radius:var(--radius-sm); padding:6px 10px;
@@ -76,13 +79,13 @@
 <div class="app">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Bookmarks</span></div>
+      <div class="crumbs"><span>Private</span><span>Bookmarks</span></div>
       <div class="topbar-spacer"></div>
     </div>
 
     <div class="page narrow">
       <header class="page-head">
-        <div class="page-emoji">🔖</div>
+        <div class="page-emoji page-emoji-svg" data-icon="bookmarks"></div>
         <div class="page-head-text">
           <h1 class="page-title">Bookmarks</h1>
           <div class="page-meta"><span>只存链接，不做归档和分类；添加时自动抓取标题和图标</span></div>
@@ -103,7 +106,7 @@
 
       <div class="card"><div id="list"><div class="mail-empty">正在加载…</div></div></div>
 
-      <h2 class="h">⭐ 一键收藏按钮</h2>
+      <h2 class="h"><span class="h-ico" data-icon="bookmarks"></span>一键收藏按钮</h2>
       <div class="card help">
         <div>把下面这个按钮<strong>拖到浏览器书签栏</strong>。在任意网页点它，就会弹出小窗保存当前页，保存后自动关闭：</div>
         <a class="bookmarklet" id="bookmarklet" title="拖到书签栏">⭐ 收藏到 Nova</a>
@@ -136,7 +139,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   var JSON_HEADERS = { "Content-Type": "application/json" };

@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Calendar · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
   <style>
     .cal-nav { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; }
     .cal-nav h2 { margin: 0; font-size: 18px; font-weight: 600; min-width: 150px; }
@@ -58,19 +61,40 @@
       padding-left: 4px;
     }
     .cal-note { margin-top: 3px; font-size: 10.5px; color: var(--bad); line-height: 1.25; }
+    /* 移动端月视图：紧凑格 + 数量角标 */
+    .cal-badge {
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 3px 6px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+      display: inline-block;
+    }
+    .cal-cell.sel { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+    @media (max-width: 820px) {
+      .cal-grid { grid-template-columns: repeat(7, 1fr); }
+      .cal-cell { min-height: 52px; padding: 3px 4px; }
+      .cal-grid.week-view .cal-cell { min-height: 52px; }
+      .cal-num { font-size: 12px; }
+      .cal-badge { font-size: 9.5px; padding: 2px 5px; }
+      .cal-note { font-size: 9px; }
+    }
   </style>
 </head>
 <body>
 <div class="app">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>Workspace</span><span>Calendar</span></div>
+      <div class="crumbs"><span>Workspace</span><span>Calendar</span></div>
       <div class="topbar-spacer"></div>
     </div>
 
     <div class="page narrow">
       <header class="page-head">
-        <div class="page-emoji">🗓️</div>
+        <div class="page-emoji page-emoji-svg" data-icon="calendar"></div>
         <div class="page-head-text">
           <h1 class="page-title">Calendar</h1>
           <div class="page-meta"><span>课程、Canvas 与本地任务按日期汇总；课程不计入待办</span></div>
@@ -86,7 +110,7 @@
       </div>
       <div class="cal-grid" id="calGrid"></div>
 
-      <h2 class="h">📋 <span id="dayTitle"></span></h2>
+      <h2 class="h"><span class="h-ico" data-icon="calendar"></span><span id="dayTitle"></span></h2>
       <div class="card">
         <div id="dayCourses"></div>
         <div id="dayTasks"></div>
@@ -100,14 +124,16 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "calendar", rail: false });
 
   var view = new Date();
   var selected = new Date();
-  var monthExpanded = false;
+  // 移动端：固定月视图（紧凑格 + 数量角标，不显示任务明细）
+  var isMobileCal = window.matchMedia("(max-width: 820px)").matches;
+  var monthExpanded = isMobileCal;
   var grid = document.getElementById("calGrid");
   var DOW = ["一", "二", "三", "四", "五", "六", "日"];
 
@@ -148,6 +174,7 @@
     }
     grid.classList.toggle("week-view", !monthExpanded);
     var modeButton = document.getElementById("viewMode");
+    if (isMobileCal) modeButton.style.display = "none"; // 移动端锁定月视图
     modeButton.textContent = monthExpanded ? "收起本周" : "展开整月";
     modeButton.setAttribute("aria-expanded", monthExpanded ? "true" : "false");
     var all = PortalTasks.load();
@@ -188,6 +215,22 @@
         note.className = "cal-note";
         note.textContent = scheduleInfo.label;
         cell.appendChild(note);
+      }
+      // 移动端月视图：只显示数量角标，不铺明细
+      if (isMobileCal) {
+        var totalM = courseDay.length + localDay.length + ocDay.length;
+        if (totalM) {
+          var badge = document.createElement("div");
+          badge.className = "cal-badge";
+          badge.textContent = totalM > 99 ? "99+" : String(totalM);
+          cell.appendChild(badge);
+        }
+        if (keyOf(d) === keyOf(selected)) cell.classList.add("sel");
+        cell.addEventListener("click", function (dd) {
+          return function () { selected = dd; render(); };
+        }(d));
+        grid.appendChild(cell);
+        continue;
       }
       while (shown < 5 && courseIdx < courseDay.length) {
         var course = courseDay[courseIdx++];

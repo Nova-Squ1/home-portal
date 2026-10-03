@@ -4,13 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Finance · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
   <style>
     .tabs { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0 6px; }
     .chip { border:1px solid var(--line-strong); background:rgba(255,255,255,.7); border-radius:999px;
       padding:3px 13px; font-size:12.5px; cursor:pointer; color:var(--ink-2); }
     .chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .chip.on .h-ico { color:#fff; }
     .tabs .spacer { flex:1; }
     .btn { border:1px solid var(--line-strong); background:#fff; border-radius:var(--radius-sm);
       padding:4px 12px; font-size:13px; cursor:pointer; color:var(--ink); }
@@ -129,13 +133,13 @@
 <div class="app">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Finance</span></div>
+      <div class="crumbs"><span>Private</span><span>Finance</span></div>
       <div class="topbar-spacer"></div>
     </div>
 
     <div class="page narrow">
       <header class="page-head">
-        <div class="page-emoji">💰</div>
+        <div class="page-emoji page-emoji-svg" data-icon="finance"></div>
         <div class="page-head-text">
           <h1 class="page-title">Finance</h1>
           <div class="page-meta">
@@ -155,8 +159,8 @@
       </div>
 
       <div class="tabs">
-        <button class="chip" data-tab="subs">🔁 订阅</button>
-        <button class="chip" data-tab="ledger">🧾 记账</button>
+        <button class="chip" data-tab="subs"><span class="h-ico" data-icon="sparkles"></span>订阅</button>
+        <button class="chip" data-tab="ledger"><span class="h-ico" data-icon="code"></span>记账</button>
         <span class="spacer"></span>
         <button class="btn primary" id="newSub">＋ 新订阅</button>
       </div>
@@ -227,7 +231,7 @@
       </section>
 
       <!-- 换算 -->
-      <h2 class="h">💱 汇率换算</h2>
+      <h2 class="h"><span class="h-ico" data-icon="chart"></span>汇率换算</h2>
       <div class="card">
         <div class="conv-row">
           <input class="f num" id="convA" type="number" step="any" inputmode="decimal" value="100">
@@ -301,7 +305,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "finance", rail: false });

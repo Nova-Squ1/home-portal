@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Servers · Nova Workspace</title>
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
+  <style>
+    /* 服务器页放开全局 .page 1100px 限制：利用整个主区宽度 */
+    .page { max-width:none; }
+    .srv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:18px; margin-top:14px; }
+    .srv-card { border-radius:14px; overflow:hidden; transition:transform .2s var(--spring); }
+    .srv-card:hover { transform:translateY(-2px); }
+    .srv-head { display:flex; align-items:center; gap:12px; padding:16px 18px 12px; }
+    .srv-flag { width:40px; height:40px; border-radius:10px; display:grid; place-items:center; font-size:22px; flex:none; }
+    .srv-name { font-weight:700; font-size:15px; }
+    .srv-sub { font-size:12px; color:var(--ink-3); margin-top:2px; }
+    .srv-links { display:grid; gap:1px; background:var(--line); border-top:1px solid var(--line); }
+    .srv-link { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 18px; background:rgba(255,255,255,.82); font-size:13.5px; font-weight:550; color:var(--ink); text-decoration:none; }
+    .srv-link:hover { background:rgba(255,255,255,.98); }
+    .srv-link .arr { color:var(--ink-3); font-size:12px; }
+    .srv-link small { color:var(--ink-3); font-weight:500; }
+    .srv-section-title { margin:22px 0 2px; font-size:13px; font-weight:700; color:var(--ink-2); }
+    @media (max-width:820px) { .srv-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="topbar"><div class="crumbs"><span>Workspace</span><span>Servers</span></div><div class="topbar-spacer"></div></div>
+    <div class="page">
+      <header class="page-head">
+        <div class="page-emoji page-emoji-svg" data-icon="server"></div>
+        <div class="page-head-text">
+          <h1 class="page-title">Servers</h1>
+          <div class="page-meta"><span>多台云服务器的控制台与终端入口</span></div>
+        </div>
+      </header>
+
+      <div class="srv-section-title">腾讯云 / 阿里云 / Google Cloud</div>
+      <div class="srv-grid">
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#e8f0ff,#d4e4ff);">🇰🇷</div>
+            <div>
+              <div class="srv-name">腾讯云首尔服</div>
+              <div class="srv-sub">Lighthouse · mcsqu.com 主力机 · 43.133.81.66</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://orcaterm.cloud.tencent.com/terminal?type=lighthouse&instanceId=lhins-llsydkjg&region=ap-seoul&protocol=auto&from=lh_console_login_btn3" target="_blank" rel="noopener noreferrer">OrcaTerm 网页终端 <span class="arr">↗</span></a>
+            <a class="srv-link" href="https://console.cloud.tencent.com/lighthouse/instance/detail?searchParams=rid%3D18&rid=18&id=lhins-llsydkjg" target="_blank" rel="noopener noreferrer">Lighthouse 实例控制台 <span class="arr">↗</span></a>
+            <a class="srv-link" href="https://panel.mcsqu.com/panel" target="_blank" rel="noopener noreferrer">1Panel 面板 <small>本机</small> <span class="arr">↗</span></a>
+          </div>
+        </div>
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#fff4e0,#ffe8c8);">🇨🇳</div>
+            <div>
+              <div class="srv-name">阿里云上海服</div>
+              <div class="srv-sub">SWAS 轻量应用服务器 · cn-shanghai</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://ecs-workbench-disposable.aliyun.com/view/instance/single/uk2wlek5kr" target="_blank" rel="noopener noreferrer">Workbench 网页终端 <span class="arr">↗</span></a>
+            <a class="srv-link" href="https://swasnext.console.aliyun.com/servers/cn-shanghai?spm=5176.swas-next_servers.0.0.46055603JVePD4" target="_blank" rel="noopener noreferrer">轻量服务器控制台 <span class="arr">↗</span></a>
+          </div>
+        </div>
+
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#e8f4ff,#d8ecff);">🇭🇰</div>
+            <div>
+              <div class="srv-name">谷歌香港服</div>
+              <div class="srv-sub">GCE · asia-east2-c · dollars</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://console.cloud.google.com/compute/instancesDetail/zones/asia-east2-c/instances/dollars?project=gen-lang-client-0964681910" target="_blank" rel="noopener noreferrer">实例控制台 <span class="arr">↗</span></a>
+            <a class="srv-link" href="https://ssh.cloud.google.com/v2/ssh/projects/gen-lang-client-0964681910/zones/asia-east2-c/instances/dollars?authuser=0&hl=zh_CN&projectNumber=1013604801205&useAdminProxy=true" target="_blank" rel="noopener noreferrer">SSH 网页终端 <span class="arr">↗</span></a>
+          </div>
+        </div>
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#fffbe8,#fff4cc);">🇺🇸</div>
+            <div>
+              <div class="srv-name">谷歌永久</div>
+              <div class="srv-sub">GCE · us-west1-b · nova-us</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://console.cloud.google.com/compute/instancesDetail/zones/us-west1-b/instances/nova-us?project=gen-lang-client-0964681910" target="_blank" rel="noopener noreferrer">实例控制台 <span class="arr">↗</span></a>
+            <a class="srv-link" href="https://ssh.cloud.google.com/v2/ssh/projects/gen-lang-client-0964681910/zones/us-west1-b/instances/nova-us?authuser=0&hl=zh_CN&projectNumber=1013604801205&useAdminProxy=true" target="_blank" rel="noopener noreferrer">SSH 网页终端 <span class="arr">↗</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="srv-section-title">通用</div>
+      <div class="srv-grid">
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#e6f6ec,#d2f0de);">☁️</div>
+            <div>
+              <div class="srv-name">Cloudflare DNS</div>
+              <div class="srv-sub">mcsqu.com 域名解析</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://dash.cloudflare.com/db8858161df398d31e4106e5849c71b3/mcsqu.com/dns/records" target="_blank" rel="noopener noreferrer">DNS 记录管理 <span class="arr">↗</span></a>
+          </div>
+        </div>
+        <div class="card srv-card">
+          <div class="srv-head">
+            <div class="srv-flag" style="background:linear-gradient(135deg,#fff0f0,#ffe0e0);">🌐</div>
+            <div>
+              <div class="srv-name">阿里云域名</div>
+              <div class="srv-sub">万网域名管理</div>
+            </div>
+          </div>
+          <div class="srv-links">
+            <a class="srv-link" href="https://dc.console.aliyun.com/next/index?spm=5176.12818093_47.resourceCenter.3.3be92cc9busLjm#/domain-list/all?type=" target="_blank" rel="noopener noreferrer">域名列表 <span class="arr">↗</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/assets/site-config.js"></script>
+<script src="/assets/app.js?v=55"></script>
+<script>
+PortalLayout.mount({ active: "server", rail: false });
+</script>
+</body>
+</html>

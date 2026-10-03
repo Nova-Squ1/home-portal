@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Notebook · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
   <style>
     .page.narrow { max-width:1280px; }
     .notebook { display:grid; grid-template-columns:260px minmax(0,1fr); min-height:650px; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 18px 55px rgba(55,53,47,.08); }
@@ -101,14 +104,14 @@
     .syntax-grid { display:grid; grid-template-columns:auto 1fr; gap:7px 12px; margin:0; font-size:11px; }
     .syntax-grid dt { color:var(--ink-2); }
     .syntax-grid dd { margin:0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
-    @media (max-width:900px) {
+    @media (max-width:1024px) and (min-width:821px) {
       .notebook { grid-template-columns:220px minmax(0,1fr); }
       .format-group:nth-of-type(3) { display:none; }
       .mode-button[data-mode="split"] { display:none; }
       .note-workspace[data-mode="split"] { grid-template-columns:1fr; }
       .note-workspace[data-mode="split"] .preview-pane { display:none; }
     }
-    @media (max-width:700px) {
+    @media (max-width:820px) {
       .page { padding-left:12px; padding-right:12px; }
       .notebook { grid-template-columns:1fr; min-height:760px; }
       .note-sidebar { max-height:210px; border-right:0; border-bottom:1px solid var(--line); }
@@ -182,25 +185,59 @@
     .note-status[data-state="error"] { color:var(--bad); }
     .markdown-preview img { display:block; max-width:100%; height:auto; margin:.6em 0; border:1px solid var(--line); border-radius:6px; }
     .markdown-preview a:has(> img) { display:inline-block; text-decoration:none; }
-    @media (max-width:700px) {
+    @media (max-width:820px) {
       .note-tags { margin-top:5px; }
       .storage-usage { display:none; }
       .note-editor-head { flex-wrap:wrap; }
     }
+    /* 护眼模式：书页淡黄（米黄纸感），工具栏 ◐ 按钮切换，偏好存在 localStorage */
+    body.eye-care .notebook { box-shadow:0 18px 55px rgba(120,105,70,.10); }
+    body.eye-care .note-sidebar { background:rgba(245,239,220,.78); }
+    body.eye-care .note-editor { background:#faf5e6; }
+    body.eye-care .note-toolbar { background:rgba(245,239,220,.62); }
+    body.eye-care .write-pane { background:rgba(250,245,230,.55); }
+    body.eye-care .preview-pane { background:rgba(250,245,230,.42); }
+    body.eye-care .note-footer { background:rgba(245,239,220,.62); }
+    body.eye-care .note-attachments { background:rgba(250,245,230,.55); }
+    body.eye-care .note-body { color:#524a37; }
+    body.eye-care .markdown-preview { color:#524a37; }
+    body.eye-care .markdown-preview code { background:rgba(110,95,60,.10); }
+    body.eye-care .markdown-preview blockquote { background:rgba(160,140,95,.12); }
+    body.eye-care .note-search, body.eye-care .note-new, body.eye-care .mode-switch { background:rgba(255,253,246,.85); }
+    /* 笔记列表可整列收起（「笔记/归档」切换右侧 « 按钮，直接隐藏侧栏列） */
+    .side-toggle-btn { flex:0 0 auto; width:26px; height:26px; border:1px solid var(--line); border-radius:7px; cursor:pointer; background:rgba(255,255,255,.84); color:var(--ink-2); font-size:12px; line-height:1; }
+    .side-toggle-btn:hover { background:var(--bg-hover); border-color:var(--line-strong); color:var(--accent); }
+    /* 桌面默认两栏（放媒体查询后必须限定 min-width，否则覆盖手机单栏规则） */
+    @media (min-width:821px) {
+      .notebook { grid-template-columns:260px minmax(0,1fr); }
+      .notebook.notes-collapsed { grid-template-columns:minmax(0,1fr); }
+    }
+    @media (max-width:820px) {
+      .notebook, .notebook.notes-collapsed { grid-template-columns:minmax(0,1fr); }
+    }
+    .notebook.notes-collapsed .note-sidebar { display:none; }
+    .notes-expand-fab { display:none; position:absolute; z-index:12; left:0; top:66px; width:22px; height:52px; border:1px solid var(--line); border-left:0; border-radius:0 8px 8px 0; cursor:pointer; background:rgba(255,255,255,.92); color:var(--ink-2); font-size:12px; box-shadow:2px 2px 10px rgba(55,53,47,.10); }
+    .notes-expand-fab:hover { color:var(--accent); }
+    .notebook.notes-collapsed .notes-expand-fab { display:block; }
   </style>
 </head>
 <body>
 <div class="app">
   <main class="main">
-    <div class="topbar"><div class="crumbs"><span>Nova Workspace</span><span>Private</span><span>Notebook</span></div><div class="topbar-spacer"></div></div>
+    <div class="topbar"><div class="crumbs"><span>Private</span><span>Notebook</span></div><div class="topbar-spacer"></div></div>
     <div class="page narrow">
-      <h1 class="page-title">Notebook</h1>
-      <div class="page-meta"><span>Markdown 私人笔记 · 停止输入约 1 秒后自动保存 · 内容仅保存在你的服务器</span></div>
+      <header class="page-head">
+        <div class="page-emoji page-emoji-svg" data-icon="notebook"></div>
+        <div class="page-head-text">
+          <h1 class="page-title">Notebook</h1>
+          <div class="page-meta"><span>Markdown 私人笔记 · 停止输入约 1 秒后自动保存 · 内容仅保存在你的服务器</span></div>
+        </div>
+      </header>
       <section class="card notebook">
         <aside class="note-sidebar">
           <div class="note-sidebar-head">
-            <div class="note-sidebar-title"><div class="note-views" role="tablist" aria-label="笔记视图"><button class="note-view active" type="button" data-view="active" role="tab">笔记<small id="activeCount">0</small></button><button class="note-view" type="button" data-view="archived" role="tab">归档<small id="archivedCount">0</small></button></div><span id="noteCount" class="note-count" title="当前列表中的笔记数">0</span></div>
-            <div class="note-tools"><label class="note-search-wrap"><span class="note-search-icon" aria-hidden="true">⌕</span><input id="noteSearch" class="note-search" type="search" placeholder="搜索标题、正文或标签…" aria-label="搜索笔记"></label><button id="noteNew" class="note-new" type="button" title="新建笔记" aria-label="新建笔记">＋</button></div>
+            <div class="note-sidebar-title"><div class="note-views" role="tablist" aria-label="笔记视图"><button class="note-view active" type="button" data-view="active" role="tab">笔记<small id="activeCount">0</small></button><button class="note-view" type="button" data-view="archived" role="tab">归档<small id="archivedCount">0</small></button></div><button id="noteSideToggle" class="side-toggle-btn" type="button" title="收起笔记列表">«</button><span id="noteCount" class="note-count" title="当前列表中的笔记数">0</span></div>
+            <div class="note-tools"><label class="note-search-wrap"><span class="note-search-icon" aria-hidden="true">⌕</span><input id="noteSearch" class="note-search" type="search" placeholder="搜索标题、正文或标签…" aria-label="搜索笔记"></label><button id="noteNew" class="note-new" type="button" title="新建笔记" aria-label="新建笔记">＋</button><button id="noteImport" class="note-new" type="button" title="导入 .md / .txt 文档为新笔记" aria-label="导入文档">⤓</button><input id="importInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden></div>
             <div id="tagFilter" class="tag-filter" aria-label="按标签筛选"></div>
           </div>
           <div id="noteList" class="note-list"></div>
@@ -225,6 +262,7 @@
             <div class="format-group"><button class="format-button" type="button" data-format="attach" title="插入图片或附件（也可以直接粘贴截图或拖入文件）">📎</button><input id="fileInput" type="file" multiple hidden></div>
             <div class="toolbar-spacer"></div>
             <div class="mode-switch" role="group" aria-label="编辑模式"><button class="mode-button" type="button" data-mode="edit">编辑</button><button class="mode-button" type="button" data-mode="split">分栏</button><button class="mode-button" type="button" data-mode="preview">预览</button></div>
+            <button id="eyeCare" class="help-button" type="button" aria-pressed="false" title="护眼模式（豆沙绿背景）">◐</button>
             <button id="helpToggle" class="help-button" type="button" aria-expanded="false" aria-controls="markdownHelp" title="Markdown 语法帮助">?</button>
           </div>
           <div id="noteWorkspace" class="note-workspace" data-mode="split">
@@ -233,6 +271,7 @@
             <div class="drop-overlay">松开鼠标上传到这篇笔记</div>
           </div>
           <div id="noteAttachments" class="note-attachments" hidden></div>
+          <button id="notesExpandFab" class="notes-expand-fab" type="button" title="展开笔记列表" aria-label="展开笔记列表">»</button>
           <div class="note-footer"><div id="noteStatus" class="note-status" role="status" aria-live="polite"></div><div id="storageUsage" class="storage-usage" title="附件已用空间 / 配额"></div><div id="editorStats" class="editor-stats">0 字 · 0 行</div></div>
           <aside id="markdownHelp" class="markdown-help" hidden>
             <div class="markdown-help-head"><strong>Markdown 快速参考</strong><button id="helpClose" type="button" aria-label="关闭帮助">×</button></div>
@@ -244,7 +283,7 @@
   </main>
 </div>
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   "use strict";
@@ -722,6 +761,38 @@
   $("helpToggle").addEventListener("click", function () { help.hidden = !help.hidden; this.setAttribute("aria-expanded", String(!help.hidden)); });
   $("helpClose").addEventListener("click", function () { help.hidden = true; $("helpToggle").setAttribute("aria-expanded", "false"); });
   search.addEventListener("input", render);
+
+  // ---------- 护眼模式（书页淡黄）、笔记列表收起与文档导入
+  var EYE_KEY = "notebook-eye-care", SIDE_KEY = "notebook-side-collapsed";
+  function applyEyeCare(on) { document.body.classList.toggle("eye-care", on); $("eyeCare").setAttribute("aria-pressed", String(on)); remember(EYE_KEY, on ? "1" : ""); }
+  $("eyeCare").addEventListener("click", function () { applyEyeCare(!document.body.classList.contains("eye-care")); });
+  function setNotesCollapsed(on) { var nb = document.querySelector(".notebook"); nb.classList.toggle("notes-collapsed", on); var b = $("noteSideToggle"); b.textContent = on ? "»" : "«"; b.title = on ? "展开笔记列表" : "收起笔记列表"; remember(SIDE_KEY, on ? "1" : ""); }
+  $("noteSideToggle").addEventListener("click", function () { setNotesCollapsed(true); });
+  $("notesExpandFab").addEventListener("click", function () { setNotesCollapsed(false); });
+  try { applyEyeCare(localStorage.getItem(EYE_KEY) === "1"); if (localStorage.getItem(SIDE_KEY) === "1") setNotesCollapsed(true); } catch (_) {}
+  var IMPORT_MAX = 100000; // 与后端 NOTE_BODY_MAX_CHARS 一致
+  function importFiles(files) {
+    files = Array.from(files || []).filter(Boolean); if (!files.length) return;
+    var done = 0, failed = 0, last = null;
+    Promise.all(files.map(function (file) {
+      var name = (file.name || "").replace(/\.(md|markdown|txt)$/i, "").trim().slice(0, 200) || "导入的笔记";
+      return Promise.resolve().then(function () { return file.text(); }).then(function (text) {
+        var chars = Array.from(text);
+        var clipped = chars.length > IMPORT_MAX;
+        var bodyText = clipped ? chars.slice(0, IMPORT_MAX).join("") : text;
+        return request("/api/notes", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ title: name, body: bodyText, tags: ["导入"] }) }).then(function (note) {
+          notes.unshift(note); last = note; done += 1;
+          if (clipped) setFlash("《" + name + "》超过 " + IMPORT_MAX / 10000 + " 万字，已截断导入", "error");
+        });
+      }).catch(function () { failed += 1; });
+    })).then(function () {
+      render();
+      if (last) select(last);
+      setFlash(failed ? "导入完成：" + done + " 篇成功、" + failed + " 篇失败" : "已导入 " + done + " 篇笔记（标签 #导入）", failed ? "error" : "saved");
+    });
+  }
+  $("noteImport").addEventListener("click", function () { $("importInput").click(); });
+  $("importInput").addEventListener("change", function () { importFiles(this.files); this.value = ""; });
 
   // ---------- 离开页面 / 网络变化
   window.addEventListener("pagehide", function () { flushActive(true); });

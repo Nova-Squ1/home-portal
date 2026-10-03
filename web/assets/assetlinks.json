@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.novasqu.portal",
+    "sha256_cert_fingerprints": [
+      "A5:7A:91:B9:31:C6:E0:80:EF:57:20:7D:88:30:BB:DE:A3:9B:41:DC:55:B9:A3:1C:8D:A9:9C:02:7F:3A:D8:E1"
+    ]
+  }
+}]

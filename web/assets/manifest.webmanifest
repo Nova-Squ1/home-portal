@@ -1,0 +1,87 @@
+{
+  "name": "工作台",
+  "short_name": "工作台",
+  "description": "Nova 个人工作台：课表、任务、Canvas、邮件、笔记、财务、News",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/app-icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/app-icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/app-icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "任务",
+      "url": "/tasks.html",
+      "short_name": "任务"
+    },
+    {
+      "name": "日历",
+      "url": "/calendar.html",
+      "short_name": "日历"
+    },
+    {
+      "name": "笔记",
+      "url": "/notebook.html",
+      "short_name": "笔记"
+    },
+    {
+      "name": "News",
+      "url": "/news.html",
+      "short_name": "News"
+    },
+    {
+      "name": "财务",
+      "url": "/finance.html",
+      "short_name": "财务"
+    },
+    {
+      "name": "收藏夹",
+      "url": "/bookmarks.html",
+      "short_name": "收藏"
+    }
+  ]
+}

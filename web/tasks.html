@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tasks · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
   <style>
     .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
     .chip {
@@ -29,6 +32,7 @@
     .lane { border:1px dashed var(--line-strong); border-radius:var(--radius-lg);
       background:rgba(255,255,255,.55); padding:12px 14px; min-height:74px; }
     .lane.dragover { border-color:var(--accent); background:var(--accent-soft); }
+    .list-lane { background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); }
     .lane-title { display:flex; align-items:center; justify-content:space-between;
       font-size:13px; font-weight:600; margin-bottom:5px; }
     .archive-lane { cursor:pointer; display:grid; place-items:center; text-align:center; }
@@ -53,17 +57,17 @@
 <div class="app">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>Workspace</span><span>Tasks</span></div>
+      <div class="crumbs"><span>Workspace</span><span>Tasks</span></div>
       <div class="topbar-spacer"></div>
     </div>
 
     <div class="page narrow">
       <header class="page-head">
-        <div class="page-emoji">✅</div>
+        <div class="page-emoji page-emoji-svg" data-icon="tasks"></div>
         <div class="page-head-text">
           <h1 class="page-title">Tasks</h1>
           <div class="page-meta">
-            <span>本地任务与 Calendar 联动；拖到主页或归档栏调整状态；🎓 项收录 <span data-site="canvas.name">Canvas</span> <strong>所有学期</strong>作业</span>
+            <span>本地任务与 Calendar 联动；拖到主页或归档栏调整状态；<span class="h-ico h-ico-inline" data-icon="grad"></span> 项收录 <span data-site="canvas.name">Canvas</span> <strong>所有学期</strong>作业</span>
           </div>
         </div>
       </header>
@@ -79,7 +83,7 @@
 
       <div class="lanes">
         <section class="lane" id="homeLane" data-drop="home">
-          <div class="lane-title"><span>🏠 主页</span><span class="task-count" id="homeCount"></span></div>
+          <div class="lane-title"><span><span class="h-ico h-ico-inline" data-icon="home2"></span>主页</span><span class="task-count" id="homeCount"></span></div>
           <div id="homeList"></div>
           <form class="task-add" id="homeForm">
             <button class="plus-btn" type="submit">＋</button>
@@ -87,12 +91,12 @@
           </form>
         </section>
         <section class="lane archive-lane" id="archiveLane" data-drop="archive" role="button" tabindex="0">
-          <div class="lane-title">🗄️ 归档<span class="archive-count" id="archiveCount">0 项 · 点击查看</span></div>
+          <div class="lane-title"><span class="h-ico h-ico-inline" data-icon="archive"></span>归档<span class="archive-count" id="archiveCount">0 项 · 点击查看</span></div>
         </section>
       </div>
 
       <div id="updated" style="font-size:11.5px;color:var(--ink-3);margin:2px 2px 0"></div>
-      <div class="card" style="margin-top:10px">
+      <div class="lane list-lane" id="listLane" data-drop="list" style="margin-top:10px">
         <div id="list"></div>
       </div>
     </div>
@@ -107,10 +111,31 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "tasks", rail: false });
+
+  // 工作台 App 远程指令落地：URL #wb-add=xxx 自动添加任务（Hermes 遥控）
+  (function () {
+    var m = location.hash.match(/wb-add=([^&]+)/);
+    if (!m) return;
+    var text = decodeURIComponent(m[1]).trim();
+    if (!text) return;
+    try {
+      var all = PortalTasks.load();
+      // 带日期语法：wb-add=2026-09-22|买菜 （无日期默认今天）
+      var date = todayKey(), body = text;
+      var dm = text.match(/^(\d{4}-\d{2}-\d{2})\|(.*)$/);
+      if (dm) { date = dm[1]; body = dm[2]; }
+      all.push({ id: "t" + Date.now() + Math.random().toString(36).slice(2, 6),
+        date: date, text: body, done: false });
+      PortalTasks.save(all);
+      history.replaceState(null, "", location.pathname);
+      render();
+      if (window.portalToast) portalToast("已添加远程任务：" + body, "success");
+    } catch (e) { /* localStorage 不可用则忽略 */ }
+  })();
 
   var filter = "open";
   var query = "";
@@ -185,7 +210,7 @@
     var tagCls = "oc-tag" + (r.overdue ? " missing" : "")
       + (r.t.plannable_type === "announcement" ? " announcement" : "");
     var dLabel = r.dueLocal ? '<span class="oc-due' + (r.overdue ? " overdue" : "") + '">' +
-      (r.overdue ? "已逾期 " : "") + r.dueLocal + " " + esc(r.dueText) + "</span>" : "";
+      (r.overdue ? "已逾期 " : "") + esc(r.dueText) + "</span>" : "";
     link.innerHTML =
       '<span class="' + tagCls + '">' + esc(r.label) + "</span>" +
       '<span class="oc-title">' + esc(r.text) + "</span>" +
@@ -301,7 +326,7 @@
 
     listEl.innerHTML = "";
     if (!rows.length) {
-      listEl.innerHTML = '<div class="mail-empty">没有符合条件的任务 🎉</div>';
+      listEl.innerHTML = '<div class="mail-empty">没有符合条件的任务</div>';
     }
 
     var groups = [];
@@ -365,7 +390,7 @@
     PortalTasks.save(all); input.value = ""; render();
   });
 
-  [document.getElementById("homeLane"), document.getElementById("archiveLane")].forEach(function (lane) {
+  [document.getElementById("homeLane"), document.getElementById("archiveLane"), document.getElementById("listLane")].forEach(function (lane) {
     lane.addEventListener("dragover", function (e) { e.preventDefault(); lane.classList.add("dragover"); });
     lane.addEventListener("dragleave", function () { lane.classList.remove("dragover"); });
     lane.addEventListener("drop", function (e) {

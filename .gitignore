@@ -10,3 +10,6 @@ __pycache__/
 *.bak*
 *.old*
 *.orig*
+
+# 安卓安装包：体积大，且内含 MQTT 口令（BuildConfig），不进仓库
+web/assets/apk/

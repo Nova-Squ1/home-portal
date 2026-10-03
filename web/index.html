@@ -4,31 +4,36 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
 </head>
 <body>
 <div class="app with-rail">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>Workspace</span><span>Home</span></div>
+      <div class="crumbs"><span>Workspace</span><span>Home</span></div>
       <div class="topbar-spacer"></div>
-      <div class="pill-live" id="livePill" title="服务器实时状态">
+      <div class="pill-live" id="livePill" data-admin="1" title="服务器实时状态">
         <span class="dot"></span><span id="liveText">连接中…</span>
       </div>
     </div>
 
-    <div class="page">
+    <div class="page home-page">
       <h1 class="page-title" id="greet">早上好</h1>
       <div class="page-meta">
         <span id="todayDate"></span>
         <span>·</span>
-        <span id="taskSummary">今天还没有任务</span>
+        <span id="worldClocks">莫斯科 --:-- · 伦敦 --:-- · 华盛顿 --:--</span>
+        <span>·</span>
+        <span id="ipSummary">📍 定位中…</span>
       </div>
 
       <div class="two-col today-overview">
         <section>
-          <h2 class="h">📚 今日课表</h2>
+          <h2 class="h"><span class="h-ico" data-icon="calendar"></span>今日课表</h2>
           <div class="h-sub" id="scheduleMeta">课程独立于任务与待办</div>
           <div class="card today-schedule" id="scheduleToday">
             <div class="mail-empty">正在加载课表…</div>
@@ -36,7 +41,7 @@
         </section>
 
         <section>
-          <h2 class="h">✅ 今日任务</h2>
+          <h2 class="h"><span class="h-ico" data-icon="tasks"></span>今日任务</h2>
           <div class="h-sub">本地任务与 Calendar 联动；🎓 项来自 <span data-site="canvas.name">Canvas</span></div>
           <div class="card" id="taskCard">
             <div class="card-title">
@@ -47,15 +52,15 @@
             <div id="canvasToday"></div>
             <form class="task-add" id="taskForm">
               <button class="plus-btn" type="submit" title="添加">＋</button>
-              <input type="text" id="taskInput" placeholder="添加一个今日任务，回车确认…" maxlength="120">
+              <input type="text" id="taskInput" placeholder="添加任务，回车确认；可用 @周五 / @9-30 / @9-30 14:00 加截止…" maxlength="120">
             </form>
           </div>
         </section>
       </div>
 
-      <div class="card" id="ocCard" style="display:none">
+      <div class="card" id="ocCard" data-feature="canvas" style="display:none">
         <div class="card-title">
-          <strong>🎓 Canvas · 近期安排</strong>
+          <strong><span class="h-ico" data-icon="doc"></span>Canvas · 近期安排</strong>
           <span>
             <span class="task-count" id="ocUpdated"></span>
             <a href="#" id="ocRefresh" class="link" style="margin-left:10px">刷新</a>
@@ -64,9 +69,10 @@
         <div id="ocList"></div>
       </div>
 
+
       <div class="two-col" style="margin-top:20px">
-        <section>
-          <h2 class="h">📬 邮箱 · 重要邮件</h2>
+        <section data-feature="mail">
+          <h2 class="h"><span class="h-ico" data-icon="mail"></span>邮箱 · 重要邮件</h2>
           <div class="h-sub">LLM 自动审查全部未读，只显示重要邮件（学业/财务/安全/私人等），推广、群发与 Facebook 通知自动过滤，读过即移除；下方附 Canvas 站内信未读 · <a href="#" id="mailRefresh" style="color:var(--accent-ink)">立即刷新</a></div>
           <div class="card">
             <div id="mailCard"><div class="mail-empty">正在检查邮箱…</div></div>
@@ -74,8 +80,8 @@
           </div>
         </section>
 
-        <section>
-          <h2 class="h">🖥️ 服务器数据</h2>
+        <section data-admin="1">
+          <h2 class="h"><span class="h-ico" data-icon="server"></span>服务器数据</h2>
           <div class="h-sub"><span data-site="server_label">本机</span> · 每 5 秒刷新</div>
           <div class="card" id="serverCard">
             <div class="kpis" style="margin-top:0">
@@ -119,7 +125,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "home", rail: true });
@@ -131,27 +137,60 @@
   document.getElementById("todayDate").textContent =
     now.getFullYear() + " 年 " + (now.getMonth() + 1) + " 月 " + now.getDate() + " 日 · " + weekdays[now.getDay()];
 
+  function cityTime(timeZone) {
+    return new Intl.DateTimeFormat("zh-CN", {
+      timeZone: timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    }).format(new Date());
+  }
+
+  function updateWorldClocks() {
+    document.getElementById("worldClocks").textContent =
+      "莫斯科 " + cityTime("Europe/Moscow") + " · 伦敦 " + cityTime("Europe/London") + " · 华盛顿 " + cityTime("America/New_York");
+  }
+
+  updateWorldClocks();
+  setInterval(updateWorldClocks, 30000);
+
+  // 访客 IP 归属地（顶部 meta 显示）
+  (function () {
+    var el = document.getElementById("ipSummary");
+    if (!el) return;
+    fetch("/api/ipinfo", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (d) {
+        var loc = (d.location || "").split(" / ");
+        el.textContent = d.private ? "内网" : "📍 " + (loc[0] || "") + (loc[2] ? " · " + loc[2] : "");
+        el.title = (d.location || "") + " · " + (d.ip || "");
+      })
+      .catch(function () { el.textContent = ""; });
+  })();
+
   function timeGreet() {
     var h = new Date().getHours();
     return h < 6 ? "夜深了" : h < 12 ? "早上好" : h < 14 ? "中午好" : h < 18 ? "下午好" : "晚上好";
   }
   greetEl.textContent = timeGreet();
-  fetch("https://v1.hitokoto.cn/?c=d&c=k&c=i&encode=json", { cache: "no-store" })
-    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-    .then(function (d) {
-      if (!d || !d.hitokoto) return;
-      var source = d.from ? ("《" + d.from + "》") : "";
-      if (d.from_who && d.from_who !== d.from) source += (source ? " · " : "") + d.from_who;
-      greetEl.textContent = d.hitokoto;
-      greetEl.title = source;
-      greetEl.style.fontSize = "26px";
-      var meta = document.querySelector(".page-meta");
-      var span = document.createElement("span");
-      span.textContent = source;
-      span.style.color = "var(--ink-3)";
-      meta.insertBefore(span, meta.firstChild);
-    })
+  // 移动端不请求一言，保留早/中/晚问候
+  if (!window.matchMedia("(max-width: 820px)").matches) {
+    fetch("https://v1.hitokoto.cn/?c=d&c=k&c=i&encode=json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (d) {
+        if (!d || !d.hitokoto) return;
+        var source = d.from ? ("《" + d.from + "》") : "";
+        if (d.from_who && d.from_who !== d.from) source += (source ? " · " : "") + d.from_who;
+        greetEl.textContent = d.hitokoto;
+        greetEl.title = source;
+        var meta = document.querySelector(".page-meta");
+        var span = document.createElement("span");
+        span.textContent = source;
+        span.style.color = "var(--ink-3)";
+        meta.insertBefore(span, meta.firstChild);
+      })
     .catch(function () { greetEl.textContent = timeGreet(); });
+  }
 
   /* ---------- 今日课表（独立于任务） ---------- */
   function renderTodaySchedule() {
@@ -187,32 +226,59 @@
 
   /* ---------- 今日任务（与 calendar 页共用 localStorage） ---------- */
   var taskList = document.getElementById("taskList");
-  var taskInput = document.getElementById("taskInput");
-  var taskForm = document.getElementById("taskForm");
   var taskCount = document.getElementById("taskCount");
-  var taskSummary = document.getElementById("taskSummary");
-  var todayKey = PortalTasks.todayKey();
-
-  var SEED_KEY = "nova.tasks.seeded.v1";
-  function seedIfNeeded() {
-    var tasks = PortalTasks.load();
-    if (!localStorage.getItem(SEED_KEY)) {
-      if (!tasks.some(function (t) { return t.date === todayKey; })) {
-        tasks = tasks.concat([
-          { id: "seed1", date: todayKey, text: "在 config/site.json 里改成自己的链接", done: false },
-          { id: "seed2", date: todayKey, text: "复习数据结构与算法", done: false },
-          { id: "seed3", date: todayKey, text: "补充邮箱 IMAP 授权码", done: false }
-        ]);
-        PortalTasks.save(tasks);
-      }
-      localStorage.setItem(SEED_KEY, "1");
-    }
-  }
+  var taskForm = document.getElementById("taskForm");
+  var taskInput = document.getElementById("taskInput");
+  var todayKey = PortalTasks.todayKey(new Date());
 
   function todaysTasks() {
     return PortalTasks.load().filter(function (t) {
-      return PortalTasks.onHome("local:" + t.id, t.date, t.done, t.archived);
+      return t.date === todayKey && !t.archived;
     });
+  }
+  function parseDdl(text) {
+    var m = text.match(/^(.*?)\s*@((?:\d{1,2}-\d{1,2})(?:\s+\d{1,2}:\d{2})?|\d{1,2}:\d{2}|明天|后天|今天|周[一二三四五六日])\s*$/);
+    if (!m) return { text: text, ddl: null };
+    var spec = m[2], body = m[1].trim();
+    if (!body) return { text: text, ddl: null };
+    var d = new Date(); var hasDate = false;
+    var dm = spec.match(/^(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    var tm = spec.match(/^(\d{1,2}):(\d{2})$/);
+    if (dm) {
+      d.setMonth(parseInt(dm[1], 10) - 1, parseInt(dm[2], 10));
+      if (dm[3]) { d.setHours(parseInt(dm[3], 10), parseInt(dm[4], 10), 0, 0); }
+      else d.setHours(23, 59, 0, 0);
+      hasDate = true;
+    } else if (tm) {
+      d.setHours(parseInt(tm[1], 10), parseInt(tm[2], 10), 0, 0);
+      hasDate = true;
+    } else if (spec === "明天") { d.setDate(d.getDate() + 1); d.setHours(23, 59, 0, 0); hasDate = true; }
+    else if (spec === "后天") { d.setDate(d.getDate() + 2); d.setHours(23, 59, 0, 0); hasDate = true; }
+    else if (spec === "今天") { d.setHours(23, 59, 0, 0); hasDate = true; }
+    else if (/^周[一二三四五六日]$/.test(spec)) {
+      var want = "一二三四五六日".indexOf(spec[1]) + 1;
+      var diff = (want - d.getDay() + 7) % 7 || 7;
+      d.setDate(d.getDate() + diff); d.setHours(23, 59, 0, 0); hasDate = true;
+    }
+    if (!hasDate) return { text: text, ddl: null };
+    return { text: body, ddl: d.getTime() };
+  }
+  function ddlLabel(ts) {
+    var d = new Date(ts), now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    var hm = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    var is2359 = hm === "23:59";
+    var dPart;
+    if (sameDay) dPart = "今天";
+    else {
+      var diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) -
+                             new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+      if (diff === 1) dPart = "明天";
+      else if (diff === 2) dPart = "后天";
+      else if (diff > 0 && diff <= 7) dPart = "周" + "日一二三四五六"[d.getDay()] + " " + (d.getMonth() + 1) + "-" + d.getDate();
+      else dPart = (d.getMonth() + 1) + "-" + d.getDate();
+    }
+    return "⏰ " + dPart + (is2359 ? "" : " " + hm);
   }
   function renderTasks() {
     var tasks = todaysTasks();
@@ -236,6 +302,8 @@
         }
         PortalTasks.save(all);
         renderTasks();
+        renderCanvasToday();
+        renderOcUpcoming();
       });
       var span = document.createElement("span");
       span.className = "task-text";
@@ -250,122 +318,44 @@
       });
       row.appendChild(cb);
       row.appendChild(span);
+      if (t.ddl) {
+        var dl = document.createElement("span");
+        var overdueDdl = !t.done && t.ddl < Date.now();
+        dl.className = "task-ddl" + (overdueDdl ? " overdue" : "");
+        dl.title = "截止时间";
+        dl.textContent = ddlLabel(t.ddl);
+        row.appendChild(dl);
+      }
       row.appendChild(del);
       taskList.appendChild(row);
     });
     taskCount.textContent = tasks.length ? (done + " / " + tasks.length + " 完成") : "";
-    taskSummary.textContent = tasks.length
-      ? ("主页 " + tasks.length + " 项任务")
-      : "主页还没有任务";
+
   }
   taskForm.addEventListener("submit", function (e) {
     e.preventDefault();
-    var text = taskInput.value.trim();
-    if (!text) return;
+    var raw = taskInput.value.trim();
+    if (!raw) return;
+    var parsed = parseDdl(raw);
     var all = PortalTasks.load();
-    all.push({ id: "t" + Date.now() + Math.random().toString(36).slice(2, 6), date: todayKey, text: text, done: false });
+    var entry = { id: "t" + Date.now() + Math.random().toString(36).slice(2, 6), date: todayKey, text: parsed.text, done: false };
+    if (parsed.ddl) entry.ddl = parsed.ddl;
+    all.push(entry);
     PortalTasks.save(all);
     taskInput.value = "";
     renderTasks();
+    renderCanvasToday();
+    renderOcUpcoming();
   });
-  function canvasRow(t, opts) {
-    opts = opts || {};
-    var label = PortalCanvas.kindLabel(t);
-    var tagCls = "oc-tag" + (t.kind === "missing" || opts.overdue ? " missing" : "")
-      + (t.plannable_type === "announcement" ? " announcement" : "");
-    var row = document.createElement("div");
-    row.className = "task-row canvas" + (opts.overdue ? " overdue" : "");
-    var link = document.createElement("a");
-    link.className = "task-link";
-    link.href = t.url || PortalSite.get("canvas.base_url", "#");
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.innerHTML =
-      '<span class="' + tagCls + '">' + label + "</span>" +
-      '<span class="oc-title">' + escHtml(t.title) + "</span>" +
-      (t.course ? '<span class="oc-course">' + escHtml(t.course) + "</span>" : "") +
-      (t.due_local_date
-        ? '<span class="oc-due' + (opts.overdue ? " overdue" : "") + '">' +
-          (opts.overdue ? "已逾期 " : "") + PortalCanvas.timeLabel(t) + "</span>"
-        : "");
-    link.title = t.course ? (t.course + " · " + label) : label;
-    row.appendChild(link);
-    return row;
-  }
+  renderTasks();
 
-  function renderCanvasToday() {
-    var box = document.getElementById("canvasToday");
-    box.innerHTML = "";
-    var tasks = (PortalCanvas.cache().tasks || []).filter(function (t) {
-      return !PortalTasks.archived("canvas:" + t.id, t.submitted, false);
-    });
-    var overdue = PortalCanvas.overdue(tasks, todayKey);
-    var today = PortalCanvas.forDate(tasks, todayKey);
-    var pinned = tasks.filter(function (t) {
-      return PortalTasks.onHome("canvas:" + t.id, t.due_local_date, t.submitted, false) &&
-        !today.some(function (x) { return x.id === t.id; }) &&
-        !overdue.some(function (x) { return x.id === t.id; });
-    });
-    if (!overdue.length && !today.length && !pinned.length) return;
-    if (overdue.length) {
-      var sep1 = document.createElement("div");
-      sep1.className = "task-sep";
-      sep1.textContent = "Canvas 逾期";
-      box.appendChild(sep1);
-      overdue.forEach(function (t) { box.appendChild(canvasRow(t, { overdue: true })); });
-    }
-    if (today.length) {
-      var sep2 = document.createElement("div");
-      sep2.className = "task-sep";
-      sep2.textContent = "Canvas 今日";
-      box.appendChild(sep2);
-      today.forEach(function (t) { box.appendChild(canvasRow(t)); });
-    }
-    if (pinned.length) {
-      var sep3 = document.createElement("div");
-      sep3.className = "task-sep";
-      sep3.textContent = "主页任务";
-      box.appendChild(sep3);
-      pinned.forEach(function (t) { box.appendChild(canvasRow(t)); });
-    }
-  }
-
-  function renderOcUpcoming() {
-    var data = PortalCanvas.cache();
-    var card = document.getElementById("ocCard");
-    var list = document.getElementById("ocList");
-    var updated = document.getElementById("ocUpdated");
-    if (!data.configured) { card.style.display = "none"; return; }
-    card.style.display = "";
-    if (data.updated) {
-      var dt = new Date(data.updated);
-      updated.textContent = "更新 " + dt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-    }
-    var todayK = todayKey;
-    var upcoming = (data.tasks || [])
-      .filter(function (t) {
-        return t.due_local_date && t.due_local_date > todayK && !t.submitted &&
-          !PortalTasks.archived("canvas:" + t.id, t.submitted, false);
-      })
-      .slice(0, 8);
-    list.innerHTML = "";
-    if ((data.errors || []).length) {
-      list.innerHTML = '<div class="mail-empty" style="color:var(--bad)">' + escHtml(data.errors[0]) + "</div>";
-      return;
-    }
-    if (!upcoming.length) {
-      list.innerHTML = '<div class="mail-empty">近期没有 Canvas 待办 🎉</div>';
-      return;
-    }
-    upcoming.forEach(function (t) { list.appendChild(canvasRow(t)); });
-  }
-
-  /* ---------- Canvas 站内信（原 Inbox 页），只列未读，读过即消失 ---------- */
+  /* ---------- /* ---------- Canvas 站内信（原 Inbox 页），只列未读，读过即消失 ---------- */
   var CANVAS_INBOX_URL = PortalSite.get("canvas.inbox_url", PortalSite.get("canvas.base_url", "#"));
   var CANVAS_INBOX_HOST = CANVAS_INBOX_URL.replace(/^https?:\/\/([^/]+).*$/, "$1");
   function renderCanvasInbox() {
     var data = PortalCanvas.cache();
     var box = document.getElementById("canvasInbox");
+    if (!box) return;
     var msgs = data.messages || [];
     var unread = msgs.filter(function (m) { return m.unread; });
     var error = (data.errors || []).find(function (e) { return String(e).indexOf("conversations:") === 0; });
@@ -405,15 +395,17 @@
       renderCanvasInbox();
     });
   }
-  document.getElementById("ocRefresh").addEventListener("click", function (e) {
-    e.preventDefault();
-    var list = document.getElementById("ocList");
-    list.innerHTML = '<div class="mail-empty">正在同步 Canvas…</div>';
-    loadCanvas(true);
-  });
+  var ocRefresh = document.getElementById("ocRefresh");
+  if (ocRefresh) {
+    ocRefresh.addEventListener("click", function (e) {
+      e.preventDefault();
+      document.getElementById("ocList").innerHTML =
+        '<div class="mail-empty">正在同步 Canvas…</div>';
+      loadCanvas(true);
+    });
+  }
 
-  seedIfNeeded();
-  renderTasks();
+
   loadCanvas();
   setInterval(function () { PortalCanvas.load(false).then(function () { renderCanvasToday(); renderOcUpcoming(); renderCanvasInbox(); }); }, 10 * 60 * 1000);
 
@@ -455,10 +447,13 @@
       fmtBytes(s.disk.used) + " / " + fmtBytes(s.disk.total);
     document.getElementById("sTime").textContent = "更新 " + new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     livePill.className = "pill-live";
-    liveText.textContent = "在线 · " + s.hostname;
+    // 移动端只显示「在线」，不显示主机名
+    liveText.textContent = window.matchMedia("(max-width: 820px)").matches
+      ? "在线" : "在线 · " + s.hostname;
     lastOk = Date.now();
   }
   function pollStats() {
+    if (!livePill) return;
     fetch("/api/server-stats", { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
       .then(renderStats)
@@ -470,7 +465,7 @@
   pollStats();
   setInterval(pollStats, 5000);
   setInterval(function () {
-    if (lastOk && Date.now() - lastOk > 20000) {
+    if (livePill && lastOk && Date.now() - lastOk > 20000) {
       livePill.className = "pill-live stale";
       liveText.textContent = "数据延迟";
     }
@@ -544,6 +539,7 @@
   function escAttr(s) { return escHtml(s).replace(/"/g, "&quot;"); }
   // sync=1 让后端先查一次 IMAP 未读状态（很快、不调用 LLM），已读邮件立即移除
   function pollMail(sync) {
+    if (!mailCard) return;
     fetch("/api/mail" + (sync ? "?sync=1" : ""), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(renderMail)
@@ -555,11 +551,14 @@
   setInterval(function () { pollMail(false); }, 30000);
   // 从 Webmail 标签页读完邮件切回主页时立即同步已读状态
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") pollMail(true); });
-  document.getElementById("mailRefresh").addEventListener("click", function (e) {
-    e.preventDefault();
-    mailCard.innerHTML = '<div class="mail-empty">正在检查邮箱…</div>';
-    pollMail(true);
-  });
+  var mailRefresh = document.getElementById("mailRefresh");
+  if (mailRefresh) {
+    mailRefresh.addEventListener("click", function (e) {
+      e.preventDefault();
+      mailCard.innerHTML = '<div class="mail-empty">正在检查邮箱…</div>';
+      pollMail(true);
+    });
+  }
   window.addEventListener("storage", function () { renderTasks(); renderCanvasToday(); renderOcUpcoming(); });
 })();
 </script>

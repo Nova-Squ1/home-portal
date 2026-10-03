@@ -4,38 +4,50 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Settings · Nova Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231f1f1f'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>N</text></svg>">
-  <link rel="stylesheet" href="/assets/app.css?v=21">
+  <link rel="icon" href="/assets/app-icons/favicon-32.png?v=5" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="stylesheet" href="/assets/app.css?v=47">
 </head>
 <body>
 <div class="app">
   <main class="main">
     <div class="topbar">
-      <div class="crumbs"><span>Nova Workspace</span><span>System</span><span>Settings</span></div>
+      <div class="crumbs"><span>System</span><span>Settings</span></div>
       <div class="topbar-spacer"></div>
     </div>
     <div class="page narrow">
       <header class="page-head">
-        <div class="page-emoji">⚙️</div>
+        <div class="page-emoji page-emoji-svg" data-icon="settings"></div>
         <div class="page-head-text">
           <h1 class="page-title">Settings</h1>
           <div class="page-meta"><span>门户与数据来源</span></div>
         </div>
       </header>
 
-      <h2 class="h">🔗 快捷入口</h2>
+      <h2 class="h"><span class="h-ico" data-icon="grid"></span>快捷入口</h2>
       <div class="card" id="quickLinks"></div>
 
-      <h2 class="h">📬 邮箱</h2>
+      <h2 class="h"><span class="h-ico" data-icon="mail"></span>邮箱</h2>
       <div class="card">
         <div style="font-size:13px;color:var(--ink-2);line-height:1.7">
           支持多个邮箱 IMAP 聚合（QQ / Gmail / 自建邮箱等）。凭证文件：
           <code style="font-family:ui-monospace,Menlo,monospace;background:var(--bg-soft);padding:1px 5px;border-radius:3px">config/mail.yml</code><br>
           从 <code style="font-family:ui-monospace,Menlo,monospace">mail.yml.example</code> 复制并填入授权码即可，无需重启，5 分钟内生效。
         </div>
+        <div id="mailDirectLinks" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"></div>
       </div>
 
-      <h2 class="h">🧹 本地数据</h2>
+      <h2 class="h" id="wbUpdateHead" data-admin="1" style="display:none"><span class="h-ico" data-icon="grid"></span>工作台 2.0</h2>
+      <div class="card" id="wbUpdateCard" data-admin="1" style="display:none">
+        <div id="wbUpdateInfo" style="font-size:13px;color:var(--ink-2);line-height:1.7"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="plus-btn" id="wbDownloadBtn" style="display:none;border:1px solid var(--line-strong);border-radius:4px;padding:4px 12px;font-size:13px;color:#fff;background:var(--accent)">下载工作台 2.0</button>
+        </div>
+      </div>
+
+      <h2 class="h"><span class="h-ico" data-icon="settings"></span>本地数据</h2>
       <div class="card">
         <div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">任务数据保存在当前浏览器（localStorage），与 Calendar 共享。</div>
         <button class="plus-btn" id="clearTasks" style="border:1px solid var(--line-strong);border-radius:4px;padding:4px 12px;font-size:13px;color:var(--bad)">清空本机任务</button>
@@ -44,7 +56,7 @@
   </main>
 </div>
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=31"></script>
+<script src="/assets/app.js?v=55"></script>
 <script>
 PortalLayout.mount({ active: "settings", rail: false });
 // 快捷入口来自 config/site.json 的 settings_links
@@ -55,11 +67,66 @@ PortalLayout.mount({ active: "settings", rail: false });
   links.forEach(function (l) {
     var row = document.createElement("div");
     row.className = "task-row";
-    var icon = document.createElement("span"); icon.className = "nav-icon"; icon.textContent = l.icon || "🔗";
+    var icon = document.createElement("span"); icon.className = "nav-icon"; icon.innerHTML = '<span class="h-ico h-ico-inline" data-icon="link"></span>';
     var a = document.createElement("a"); a.href = l.href; a.target = "_blank"; a.rel = "noopener";
     a.style.color = "var(--accent-ink)"; a.textContent = l.label + " ↗";
     row.appendChild(icon); row.appendChild(a); box.appendChild(row);
   });
+  if (window.PortalHydrateIcons) window.PortalHydrateIcons();
+})();
+
+// 外部邮箱直链
+(function () {
+  var box = document.getElementById("mailDirectLinks");
+  var links = PortalSite.get("mail_setup_links", []);
+  links.forEach(function (l) {
+    var a = document.createElement("a");
+    a.href = l.href; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.className = "chip";
+    a.style.cssText = "text-decoration:none;padding:4px 14px;font-size:12.5px;";
+    a.innerHTML = '<span class="h-ico h-ico-inline" data-icon="mail"></span>' + l.label + " ↗";
+    box.appendChild(a);
+  });
+  if (window.PortalHydrateIcons) window.PortalHydrateIcons();
+})();
+// 工作台 2.0 更新卡（App 2.x 内或手机浏览器显示）
+(function () {
+  var head = document.getElementById("wbUpdateHead");
+  var card = document.getElementById("wbUpdateCard");
+  var info = document.getElementById("wbUpdateInfo");
+  var btn = document.getElementById("wbDownloadBtn");
+  // 工作台 APK 只对站主可见（App 内写死 home.mcsqu.com，朋友装了也进不去）
+  if (!head || !card || !info || !btn) return;
+  var isWbApp = /Workbench\/[0-9]/.test(navigator.userAgent);
+  var isMobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  if (!isWbApp && !isMobile) return;
+  fetch("/api/workbench-version", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function (v) {
+      var m = navigator.userAgent.match(/Workbench\/([0-9]+)/);
+      var cur = m ? parseInt(m[1], 10) : 0;
+      head.style.display = "";
+      card.style.display = "";
+      if (isWbApp) {
+        if (v.versionCode > cur) {
+          info.textContent = "发现新版本 v" + (v.versionName || v.versionCode) +
+            "（当前 v" + (v.versionName || cur) + "）" + (v.notes ? "：" + v.notes : "");
+          btn.textContent = "下载并安装 v" + (v.versionName || v.versionCode);
+          btn.style.display = "";
+        } else {
+          info.textContent = "工作台 2.0 已是最新 v" + (v.versionName || cur) + "。";
+        }
+      } else {
+        info.textContent = "工作台 2.0（Hermes 移动载体：聊天/远程指令/通知栏回复）当前 v" +
+          (v.versionName || v.versionCode) + (v.notes ? "：" + v.notes : "");
+        btn.style.display = "";
+      }
+      btn.onclick = function () {
+        var u = v.apkUrl || "/assets/apk/Workbench.apk";
+        window.location.href = "https://home.mcsqu.com" + u + (u.indexOf("?") < 0 ? "?t=" : "&t=") + Date.now();
+      };
+    })
+    .catch(function () { });
 })();
 document.getElementById("clearTasks").addEventListener("click", function () {
   PortalDialog.confirm({ danger: true, title: "清空本地任务？", message: "会删除这个浏览器里保存的所有本地任务，Canvas 任务不受影响。", confirmText: "清空" }).then(function (ok) {
