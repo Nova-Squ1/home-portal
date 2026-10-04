@@ -167,7 +167,7 @@ button { font-family: inherit; }
 /* ---------- Main ---------- */
 .main { display: flex; flex-direction: column; min-width: 0; }
 .topbar {
-  height: 44px; padding: 0 16px;
+  height: 38px; padding: 0 16px;
   border-bottom: 1px solid var(--line);
   display: flex; align-items: center; gap: 12px;
   color: var(--ink-2); font-size: 13px;
@@ -205,17 +205,18 @@ button { font-family: inherit; }
   align-self: center;
 }
 .page.narrow { max-width: 1280px; }
-.page.narrow { padding-top: 24px; }
-.page:not(.home-page) > .page-head { margin-bottom: 18px; }
+/* 子页面首屏收紧：面包屑下方不再留一大段空白。 */
+.page:not(.home-page) { padding-top: 12px; }
+.page:not(.home-page) > .page-head { margin-bottom: 12px; }
 .page-emoji { font-size: 56px; line-height: 1; margin: 0 0 12px; }
 .page-emoji.page-emoji-svg {
-  font-size: 0; width: 44px; height: 44px; margin: 0;
+  font-size: 0; width: 38px; height: 38px; margin: 0;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--accent);
   background: var(--accent-soft);
-  border-radius: 12px;
+  border-radius: 10px;
 }
-.page-emoji.page-emoji-svg svg { width: 26px; height: 26px; }
+.page-emoji.page-emoji-svg svg { width: 22px; height: 22px; }
 .h-ico {
   display: inline-flex; width: 22px; height: 22px; margin-right: 6px;
   color: var(--accent); vertical-align: -4px;
@@ -232,12 +233,12 @@ h1.page-title {
   min-width: 0; flex-wrap: nowrap;
 }
 .page-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* 子页标题：大 emoji 在左，标题与说明叠在右侧同一行 */
-.page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+/* 子页标题：紧凑图标、标题与说明同排 */
+.page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .page-head .page-emoji { margin: 0; flex: 0 0 auto; }
 .page-head-text { min-width: 0; }
-.page-head h1.page-title { margin: 0 0 4px; }
-.page-head .page-meta { margin-bottom: 0; flex-wrap: wrap; row-gap: 2px; }
+.page-head h1.page-title { font-size: 30px; line-height: 1.08; margin: 0 0 2px; }
+.page-head .page-meta { margin-bottom: 0; flex-wrap: wrap; row-gap: 2px; font-size: 12.5px; }
 
 /* 首页标题信息与首屏内容保持紧凑，避免两层外边距叠加。 */
 .home-page > .page-meta { margin-bottom: 10px; }
@@ -620,6 +621,14 @@ h2.h {
 /* 抽屉遮罩：桌面端不参与布局（JS 会插入 .app 内，不能让它占 grid 格子） */
 .drawer-scrim { display: none; }
 
+/* 搜索面板补全建议 */
+.bang-svg { display: inline-flex; width: 18px; height: 18px; color: var(--accent, #0a84ff); }
+.bang-svg svg { width: 100%; height: 100%; }
+.palette-item.suggest .suggest-text { font-weight: 550; }
+.palette-item.suggest .suggest-fill { margin-left: auto; font-size: 10.5px; color: var(--ink-3); opacity: 0; transition: opacity .12s ease; }
+.palette-item.suggest:hover .suggest-fill { opacity: 1; }
+.palette-item.suggest { padding-left: 14px; }
+
 /* 本地任务 DDL 标签（主页今日任务） */
 .task-ddl {
   flex: none; margin-left: auto;
@@ -696,10 +705,11 @@ h2.h {
     box-shadow: 0 2px 12px rgba(31, 26, 48, .12);
   }
   .topbar { padding-left: 8px; }
-  .page { padding: 28px 20px 64px; }
-  .page-head { gap: 12px; align-items: flex-start; }
-  .page-head .page-emoji { font-size: 44px; }
-  .page-head h1.page-title { font-size: 30px; }
+  .page { padding: 10px 20px 64px; }
+  .page-head { gap: 10px; align-items: center; }
+  .page-head .page-emoji { width: 36px; height: 36px; }
+  .page-head .page-emoji svg { width: 21px; height: 21px; }
+  .page-head h1.page-title { font-size: 27px; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }
   .course-row { grid-template-columns: 50px minmax(0, 1fr); }

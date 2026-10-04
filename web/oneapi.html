@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icons/icon-192.png?v=5">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#f5f5f7">
-  <link rel="stylesheet" href="/assets/app.css?v=47">
+  <link rel="stylesheet" href="/assets/app.css?v=49">
   <style>
     .oa-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0 4px; }
     .oa-kpi { border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; background:rgba(255,255,255,.55); }
@@ -22,7 +22,11 @@
 
     .oa-item { display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; padding:12px 4px; border-bottom:1px solid var(--line); }
     .oa-item:last-child { border-bottom:none; }
-    .oa-emoji { font-size:22px; line-height:34px; text-align:center; }
+    .oa-emoji { width:40px; height:40px; display:grid; place-items:center; border-radius:10px;
+      background:rgba(10,132,255,.10); color:var(--accent-ink,#0a6fdb); flex:none; }
+    .oa-emoji svg { width:24px; height:24px; }
+    h2.h .oa-hicon { display:inline-block; width:22px; height:22px; vertical-align:-4px; margin-right:2px; color:var(--accent-ink,#0a6fdb); }
+    h2.h .oa-hicon svg { width:100%; height:100%; }
     .oa-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
     .oa-name { font-weight:600; font-size:14.5px; color:var(--ink); }
     .oa-badge { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); white-space:nowrap; }
@@ -67,7 +71,7 @@
   </main>
 </div>
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=55"></script>
+<script src="/assets/app.js?v=58"></script>
 <script>
 PortalLayout.mount({ active: "oneapi", rail: false });
 (function () {
@@ -114,12 +118,12 @@ PortalLayout.mount({ active: "oneapi", rail: false });
     if (cred.file) {
       var ok = i.credential_ok;
       credHtml = '<span class="oa-cred ' + (ok ? "ok" : "bad") + '">' + (ok ? "✓ 凭据在位" : "✗ 凭据缺失") + "</span>" +
-        "<span>🔑 <code>" + esc(cred.file) + (cred.var ? " · " + esc(cred.var) : "") + "</code></span>";
+        "<span><code>" + esc(cred.file) + (cred.var ? " · " + esc(cred.var) : "") + "</code></span>";
     } else {
       credHtml = "<span>🔓 无需凭据</span>";
     }
     return '<div class="oa-item">' +
-      '<div class="oa-emoji">' + esc(i.emoji || "🔌") + "</div>" +
+      '<div class="oa-emoji oa-icon">' + (window.PortalSite && PortalSite.icon ? PortalSite.icon(i.svg || "plug") : '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M7 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2M7 7h10v4a5 5 0 0 1-10 0V7Z"/></svg>') + "</div>" +
       "<div>" +
         '<div class="oa-head"><span class="oa-name">' + esc(i.name) + "</span>" +
           '<span class="oa-badge">' + esc(i.kind) + "</span>" +
@@ -127,7 +131,7 @@ PortalLayout.mount({ active: "oneapi", rail: false });
         (i.endpoint ? '<div class="oa-endpoint">' + esc(i.endpoint) + "</div>" : "") +
         ((i.models || []).length ? '<div class="oa-models">' + i.models.map(function (m) { return "<code>" + esc(m) + "</code>"; }).join("") + "</div>" : "") +
         '<ul class="oa-uses">' + (i.uses || []).map(function (u) { return "<li>" + esc(u) + "</li>"; }).join("") + "</ul>" +
-        '<div class="oa-meta">' + credHtml + (i.note ? "<span>💡 " + esc(i.note) + "</span>" : "") + "</div>" +
+        '<div class="oa-meta">' + credHtml + (i.note ? "<span>" + esc(i.note) + "</span>" : "") + "</div>" +
       "</div></div>";
   }
 
@@ -135,7 +139,7 @@ PortalLayout.mount({ active: "oneapi", rail: false });
     var html = (data.groups || []).map(function (g) {
       var items = (g.items || []).filter(match);
       if (!items.length) return "";
-      return '<h2 class="h">' + esc(g.emoji || "") + " " + esc(g.title) + "</h2>" +
+      return '<h2 class="h">' + (g.svg && window.PortalSite ? '<span class="oa-hicon">' + PortalSite.icon(g.svg || "plug") + "</span>" : "") + esc(g.title) + "</h2>" +
         '<div class="card">' + items.map(renderItem).join("") + "</div>";
     }).join("");
     $("oaGroups").innerHTML = html || '<div class="card"><div class="oa-empty">这个筛选下没有条目</div></div>';

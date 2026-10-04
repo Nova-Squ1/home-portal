@@ -366,7 +366,7 @@
     var backdrop = el("div", "palette-backdrop");
     backdrop.innerHTML =
       '<div class="palette">' +
-      '  <div class="palette-input"><span>🔎</span><input type="text" id="paletteInput" placeholder="用 Nova Search 搜索，或用 !gh / !b / !so / !arxiv 跳转…" autocomplete="off"></div>' +
+      '  <div class="palette-input"><span>🔎</span><input type="text" id="paletteInput" placeholder="用 Nova Search 搜索，或用 !gh / !b 跳转…" autocomplete="off"></div>' +
       '  <div class="palette-list" id="paletteList"></div>' +
       '  <div class="palette-foot"><span>↵ 跳转</span><span>esc 关闭</span><span>⌘K 随时唤起</span></div>' +
       "</div>";
@@ -389,16 +389,52 @@
       }).filter(function (en) { return q.trim(); });
     }
 
+    var suggestTimer = null;
+    var suggestions = [];
+
+    function fetchSuggestions(q) {
+      if (suggestTimer) clearTimeout(suggestTimer);
+      suggestions = [];
+      var qq = q.trim();
+      if (!qq || /^!/.test(qq)) { render(); return; }
+      suggestTimer = setTimeout(function () {
+        fetch("/searxng/autocompleter?q=" + encodeURIComponent(qq), { cache: "no-store" })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+          .then(function (d) {
+            suggestions = (Array.isArray(d) && Array.isArray(d[1]) ? d[1] : []).slice(0, 5);
+            render();
+          })
+          .catch(function () { suggestions = []; render(); });
+      }, 180);
+    }
+
     function render() {
-      var items = currentEngines(input.value);
+      var q = input.value;
+      var items = currentEngines(q);
       activeIdx = 0;
       list.innerHTML = "";
-      if (!items.length) {
+      if (!items.length && !suggestions.length) {
         list.innerHTML = '<div class="palette-item" style="color:var(--ink-3);cursor:default">输入关键词开始搜索</div>';
         return;
       }
+      // 补全建议区（在引擎列表上方）：点击=用该词重新填充并搜索
+      suggestions.forEach(function (sq) {
+        var row = el("div", "palette-item suggest");
+        row.innerHTML =
+          '<span class="bang bang-svg">' + (ICONS.sparkles || "") + '</span><span class="suggest-text">' + esc(sq) + "</span>" +
+          '<span class="suggest-fill" title="填入输入框">填入 ↵</span>';
+        row.addEventListener("click", function () {
+          input.value = sq;
+          suggestions = [];
+          render();
+          var eng = currentEngines(sq)[0];
+          if (eng) window.open(eng.url, "_blank", "noopener");
+          close();
+        });
+        list.appendChild(row);
+      });
       items.forEach(function (it, i) {
-        var row = el("div", "palette-item" + (i === 0 ? " active" : ""));
+        var row = el("div", "palette-item" + (i === 0 && !suggestions.length ? " active" : ""));
         var bangName = it.name.split(" · ")[1];
         row.innerHTML =
           (bangName ? '<span class="bang">' + esc(bangName) + "</span>" : '<span class="bang">web</span>') +
@@ -406,6 +442,12 @@
         row.addEventListener("click", function () { window.open(it.url, "_blank", "noopener"); close(); });
         list.appendChild(row);
       });
+      if (suggestions.length) {
+        var hint = el("div", "palette-item", "");
+        hint.style.cssText = "color:var(--ink-3);font-size:11px;cursor:default;border-top:1px dashed var(--line);margin-top:2px";
+        hint.textContent = "搜索建议来自 DuckDuckGo（经 Nova Search）· 上下键选择引擎";
+        list.appendChild(hint);
+      }
     }
 
     function open() {
@@ -416,7 +458,7 @@
     }
     function close() { backdrop.classList.remove("show"); }
 
-    input.addEventListener("input", render);
+    input.addEventListener("input", function () { render(); fetchSuggestions(input.value); });
     input.addEventListener("keydown", function (e) {
       var rows = list.querySelectorAll(".palette-item");
       if (e.key === "Escape") { close(); }
@@ -756,6 +798,12 @@
     features: FEATURES,
     admin: IS_ADMIN,
     can: can,
+    // 任意页面取线性 SVG 图标：PortalSite.icon("brain") → <svg>
+    icon: function (key) {
+      return ICONS[key]
+        ? '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[key].replace(/^<svg[^>]*>|<\/svg>$/g, "") + "</svg>"
+        : "";
+    },
     // data-feature="mail" / data-admin 的节点在功能未开放时整块移除
     gate: function (root) {
       (root || document).querySelectorAll("[data-feature]").forEach(function (node) {
