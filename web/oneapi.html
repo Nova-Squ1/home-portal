@@ -20,7 +20,7 @@
     .oa-filter button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
     .oa-note { font-size:12.5px; color:var(--ink-3); margin:6px 2px 0; line-height:1.6; }
 
-    .oa-item { display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; padding:12px 4px; border-bottom:1px solid var(--line); }
+    .oa-item { display:grid; grid-template-columns:40px minmax(0,1fr); column-gap:16px; row-gap:10px; padding:12px 4px; border-bottom:1px solid var(--line); }
     .oa-item:last-child { border-bottom:none; }
     .oa-emoji { width:40px; height:40px; display:grid; place-items:center; border-radius:10px;
       background:rgba(10,132,255,.10); color:var(--accent-ink,#0a6fdb); flex:none; }
@@ -120,7 +120,7 @@ PortalLayout.mount({ active: "oneapi", rail: false });
       credHtml = '<span class="oa-cred ' + (ok ? "ok" : "bad") + '">' + (ok ? "✓ 凭据在位" : "✗ 凭据缺失") + "</span>" +
         "<span><code>" + esc(cred.file) + (cred.var ? " · " + esc(cred.var) : "") + "</code></span>";
     } else {
-      credHtml = "<span>🔓 无需凭据</span>";
+      credHtml = '<span class="oa-cred ok">无需凭据</span>';
     }
     return '<div class="oa-item">' +
       '<div class="oa-emoji oa-icon">' + (window.PortalSite && PortalSite.icon ? PortalSite.icon(i.svg || "plug") : '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M7 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2M7 7h10v4a5 5 0 0 1-10 0V7Z"/></svg>') + "</div>" +
