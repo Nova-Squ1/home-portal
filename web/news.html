@@ -47,17 +47,7 @@
     }
     .news-page-tldr.pending { color: var(--ink-3); }
     .news-src-sy { background: rgba(122, 162, 247, .18); color: #3b6fd4; }
-    .news-page-meta { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(180, 165, 130, .4); font-size: 11.5px; color: var(--ink-3); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .news-page-meta .meta-extra { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .news-orig {
-      flex: none; margin-left: auto;
-      display: inline-flex; align-items: center; gap: 3px;
-      color: var(--accent-ink, #0a6fdb); text-decoration: none; font-weight: 550;
-      padding: 2px 8px; border-radius: 6px;
-      background: rgba(10, 132, 255, .08);
-      transition: background .15s ease;
-    }
-    .news-orig:hover { background: rgba(10, 132, 255, .16); }
+    .news-page-meta { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(180, 165, 130, .4); font-size: 11.5px; color: var(--ink-3); }
     .news-open-btn {
       position: absolute; top: 10px; right: 10px;
       width: 26px; height: 26px; border-radius: 7px;
@@ -337,8 +327,7 @@
           '<div class="news-page-title-line">' + srcTag(it.source) +
             '<span class="news-page-title">' + esc(it.title) + "</span></div>" +
           tldr +
-          '<div class="news-page-meta">' + (meta.length ? '<span class="meta-extra">' + meta.join(' · ') + '</span>' : '') +
-            '<a class="news-orig" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">打开原帖 ↗</a></div>' +
+          '<div class="news-page-meta">' + meta.join(" · ") + "</div>" +
         "</div>";
       row.appendChild(starBtn);
       var delBtn = document.createElement('button');
