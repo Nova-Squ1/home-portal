@@ -9,7 +9,8 @@
   4. /api/finance* 订阅与记账（见 finance.py）；/api/bookmarks* 收藏夹（见 bookmarks.py）；
   5. /assets/site-config.js、/assets/schedule.json：个人站点配置与课表，读 config/ 下的私有文件，
      不存在时退回 web/assets/ 里的示例（*.example.*），所以仓库里不含个人信息；
-  6. /api/health。
+  6. /api/health；
+  7. /api/translate：Edge 翻译插件（extension/）的后端，见 translate.py。
 
 仅监听 127.0.0.1，公网访问由 Caddy + Authelia 把关。
 仅使用 Python 标准库，pip 无需安装任何东西。
@@ -38,6 +39,7 @@ import news_digest
 import news_saved
 import news_stock
 import news_summary
+import translate
 
 IPINFO_CACHE = {}  # ip -> (ts, data) 访客归属地缓存
 
@@ -1302,6 +1304,18 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, ValueError) as exc:
                 self.send_json({"error": "台账读取失败：%s" % exc}, status=500)
             return
+        if path == "/api/translate/extension.zip":
+            if not self.require_admin(t):
+                return
+            body = translate.extension_zip()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Disposition", 'attachment; filename="codex-translate.zip"')
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/api/ipinfo":
             # 访客 IP 归属地（X-Forwarded-For 由 Caddy 注入；归属地查 ip-api.com，内存缓存 10 分钟）
             ip = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip() or self.client_address[0]
@@ -1477,6 +1491,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"items": news_saved.list_saved(t)}, status=201)
             except ValueError as exc:
                 self.send_json({"error": str(exc)}, status=400)
+            return
+        if path == "/api/translate":
+            # Edge 翻译插件（extension/），烧 Codex 订阅额度，只给站主
+            if not self.require_admin(t):
+                return
+            try:
+                self.send_json({"texts": translate.translate(self.read_json().get("texts"))})
+            except ValueError as exc:
+                self.send_json({"error": str(exc)}, status=400)
+            except RuntimeError as exc:
+                self.send_json({"error": str(exc)}, status=502)
             return
         upload_note = self.route_id(r"/api/notes/([a-f0-9]{16})/attachments")
         if upload_note:

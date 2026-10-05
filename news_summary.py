@@ -153,17 +153,24 @@ def translate_titles(titles):
 
 def _summarize_codex(content):
     """Codex gpt-5.6-luna（回退）。"""
+    return codex_complete(SYSTEM_PROMPT, content)
+
+
+def codex_complete(instructions, content, effort=None):
+    """调一次 Codex（CODEX_MODEL）拿纯文本输出，任何失败返回 None。翻译接口 translate.py 也用它。"""
     token, account = _load_token()
     if not token:
         return None
     payload = {
         "model": CODEX_MODEL,
-        "instructions": SYSTEM_PROMPT,
+        "instructions": instructions,
         "input": [{"type": "message", "role": "user",
                    "content": [{"type": "input_text", "text": content}]}],
         "store": False,
         "stream": True,
     }
+    if effort:
+        payload["reasoning"] = {"effort": effort}
     req = urllib.request.Request(
         "https://chatgpt.com/backend-api/codex/responses",
         data=json.dumps(payload).encode("utf-8"),
@@ -192,8 +199,8 @@ def _summarize_codex(content):
                     continue
                 if obj.get("type") == "response.output_text.delta":
                     parts.append(obj.get("delta") or "")
-        tldr = "".join(parts).strip()
+        text = "".join(parts).strip()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError) as exc:
-        print("codex summary error:", type(exc).__name__, exc, flush=True)
+        print("codex error:", type(exc).__name__, exc, flush=True)
         return None
-    return tldr or None
+    return text or None

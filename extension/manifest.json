@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Codex 翻译",
+  "version": "1.0.0",
+  "description": "用 Codex 订阅的 gpt-5.6-luna 把网页译成简体中文（经门户 /api/translate 代转）。",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Codex 翻译（Alt+T）" },
+  "commands": {
+    "toggle": {
+      "suggested_key": { "default": "Alt+T" },
+      "description": "翻译 / 还原当前页"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Codex 翻译</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { width: 260px; margin: 12px; font: 13px/1.5 system-ui, sans-serif; }
+    button { font: inherit; padding: 4px 12px; cursor: pointer; }
+    #go { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .modes { display: flex; gap: 14px; margin-bottom: 10px; }
+    .row { display: flex; gap: 6px; margin-bottom: 6px; }
+    #server { flex: 1; min-width: 0; font: inherit; padding: 3px 6px; }
+    small { color: GrayText; }
+    #msg { margin-top: 8px; color: #d33; }
+  </style>
+</head>
+<body>
+  <button id="go" disabled>翻译此页</button>
+  <div class="modes">
+    <label><input type="radio" name="mode" value="replace"> 原地替换</label>
+    <label><input type="radio" name="mode" value="bilingual"> 双语对照</label>
+  </div>
+  <div class="row">
+    <input id="server" type="url" placeholder="门户地址 https://…" aria-label="门户地址">
+    <button id="save">保存</button>
+  </div>
+  <small>快捷键 Alt+T，可在 edge://extensions/shortcuts 改</small>
+  <div id="msg" role="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
