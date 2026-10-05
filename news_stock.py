@@ -63,8 +63,9 @@ def _slim(it):
 
 
 def size():
+    """库存数（展示用）：只数非 arxiv——arXiv 已停抓下线，旧论文帖不进推送（2026-10-05）。"""
     with LOCK:
-        return len(_read(STOCK_PATH))
+        return sum(1 for it in _read(STOCK_PATH).values() if it.get("source") != "arxiv")
 
 
 def collect(items):
@@ -81,9 +82,9 @@ def collect(items):
             continue
         if not news_digest._not_baoyan(it):
             continue
-        # linux.do / v2ex 在抓取层已过 Jev；水源在这里补审干货（Jev 不可用时放行）；arXiv 不审
-        if it.get("source") == "shuiyuan" and k not in pending0 and news_digest.jev_verdict(
-                "shuiyuan", it.get("title"), it.get("category"), it.get("summary")) is False:
+        # linux.do / v2ex 在抓取层已过 Jev；水源、idcflare、nodeseek 在这里补审干货（Jev 不可用时放行）；arXiv 不审
+        if it.get("source") in ("shuiyuan", "idcflare", "nodeseek") and k not in pending0 and news_digest.jev_verdict(
+                it.get("source"), it.get("title"), it.get("category"), it.get("summary")) is False:
             continue
         fresh.append((k, it))
     added = queued = 0
@@ -177,8 +178,11 @@ def view(t, refresh=False):
         stock = _read(STOCK_PATH)
         v = _read(path)
         skip = {i.get("key") for i in news_saved.list_saved(t)} | set(news_digest.list_blocked())
+        # 2026-10-05 arXiv 停抓后：库存旧论文帖仍可展示，但优先级最低——
+        # 只有非 arxiv 帖不够填满时才用 arxiv 补位（随机补位时排除，最后兜底）
         ok = [k for k, it in stock.items()
               if k not in skip and (it.get("source") != "arxiv" or it.get("title_zh"))]
+        non_arxiv = [k for k in ok if stock[k].get("source") != "arxiv"]
         okset = set(ok)
         shown = [k for k in v.get("shown", []) if k in okset]
         seen = set(v.get("seen", [])) & okset
@@ -187,12 +191,12 @@ def view(t, refresh=False):
             shown = []
         need = SHOW - len(shown)
         if need > 0:
-            pool = [k for k in ok if k not in seen and k not in shown]
+            pool = [k for k in non_arxiv if k not in seen and k not in shown]
             pick = random.sample(pool, min(need, len(pool)))
-            if len(pick) < need:  # 库存轮完一遍：清空已看，从头再来
+            if len(pick) < need:  # 非arxiv轮完一遍：清空已看从头再来；宁可空位也不拿 arxiv 填（2026-10-05 用户要求下论文）
                 seen = set()
-                pool = [k for k in ok if k not in shown and k not in pick]
-                pick += random.sample(pool, min(need - len(pick), len(pool)))
+                pool2 = [k for k in non_arxiv if k not in shown and k not in pick]
+                pick += random.sample(pool2, min(need - len(pick), len(pool2)))
             shown += pick
         new = {"shown": shown, "seen": sorted(seen)}
         if new != v:
@@ -200,18 +204,24 @@ def view(t, refresh=False):
         return [stock[k] for k in shown]
 
 
-def sync_once():
-    return collect(news_digest.build_digest().get("items", []))
+def sync_once(fast_only=False, only_nodeseek=False):
+    return collect(news_digest.build_digest(fast_only=fast_only, only_nodeseek=only_nodeseek).get("items", []))
 
 
 def poller():
     time.sleep(8)  # 让门户先起来
+    tick = 0
     while True:
         try:
-            sync_once()
+            # 轮转节奏（2026-10-05）：tick%5==2/4 只抓 NodeSeek（3 分钟一轮，高频源）；
+            # tick%2==1 抓快源（水源/idcflare/V2EX，15 分钟）；tick 偶数全量（30 分钟含 linux.do）
+            only_ns = tick % 5 in (2, 4)
+            fast_only = (tick % 2 == 1) and not only_ns
+            sync_once(fast_only=fast_only, only_nodeseek=only_ns)
         except Exception:  # noqa: BLE001
             pass
-        time.sleep(news_digest.POLL_SECONDS)
+        time.sleep(news_digest.POLL_SECONDS // 10)  # 3 分钟一拍
+        tick += 1
 
 
 def tldr_poller():

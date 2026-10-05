@@ -125,6 +125,10 @@
     .seg-dot-ldo { background: #0a84ff; }
     .seg-dot-sy { background: #7aa2f7; }
     .seg-dot-arxiv { background: #b13b2c; }
+    .seg-dot-idc { background: #7a5af8; }
+    .seg-dot-ns { background: #e0a020; }
+    .seg-dot-hn { background: #ff6600; }
+    .seg-dot-sw { background: #0ea5a5; }
     .seg-dot-v2ex { background: #248a3d; }
     .src-seg .seg-count {
       font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px;
@@ -135,6 +139,12 @@
     .src-seg button.on .seg-dot-sy { box-shadow: 0 0 0 3px rgba(122,162,247,.2); }
     .src-seg button.on .seg-dot-arxiv { box-shadow: 0 0 0 3px rgba(177,59,44,.16); }
     .src-seg button.on .seg-dot-v2ex { box-shadow: 0 0 0 3px rgba(36,138,61,.16); }
+    .src-seg button.on .seg-dot-idc { box-shadow: 0 0 0 3px rgba(122,90,248,.18); }
+    .src-seg button.on .seg-dot-ns { box-shadow: 0 0 0 3px rgba(224,160,32,.18); }
+    .news-src-ns { background: rgba(224, 160, 32, .14); color: #b07810; }
+    .news-src-hn { background: rgba(255, 102, 0, .12); color: #d35400; }
+    .news-src-sw { background: rgba(14, 165, 165, .12); color: #0d8a8a; }
+    .news-src-idc { background: rgba(122, 90, 248, .12); color: #6a4ae0; }
     .news-src-arxiv { background: rgba(177, 59, 44, .12); color: #a03325; }
     .news-star {
       position: absolute; top: 10px; right: 44px; z-index: 2;
@@ -186,7 +196,7 @@
         <div class="page-emoji page-emoji-svg" data-icon="fire"></div>
         <div class="page-head-text">
           <h1 class="page-title">News</h1>
-          <div class="page-meta"><span>linux.do · 水源 · arXiv · V2EX · 点击便签看省流全文 · ↗ 跳原帖 · 省流由 glm-5.3 生成</span></div>
+          <div class="page-meta"><span>L站 · 水源 · IDC · NS · V2EX · HN · SW · 点击便签看省流全文 · ↗ 跳原帖</span></div>
         </div>
       </header>
 
@@ -220,7 +230,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=58"></script>
+<script src="/assets/app.js?v=59"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "news", rail: false });
@@ -235,7 +245,10 @@
     { id: "saved", label: "收藏", dot: null },
     { id: "linux.do", label: "L站", dot: "seg-dot-ldo" },
     { id: "shuiyuan", label: "水源", dot: "seg-dot-sy" },
-    { id: "arxiv", label: "arXiv", dot: "seg-dot-arxiv" },
+    { id: "idcflare", label: "IDC", dot: "seg-dot-idc" },
+    { id: "nodeseek", label: "NS", dot: "seg-dot-ns" },
+    { id: "hn", label: "HN", dot: "seg-dot-hn" },
+    { id: "simonw", label: "SW", dot: "seg-dot-sw" },
     { id: "v2ex", label: "V2EX", dot: "seg-dot-v2ex" }
   ];
 
@@ -247,7 +260,11 @@
     if (src === "linux.do") return '<span class="news-src news-src-ldo">L站</span>';
     if (src === "v2ex") return '<span class="news-src news-src-v2ex">V2EX</span>';
     if (src === "shuiyuan") return '<span class="news-src news-src-sy">水源</span>';
-    if (src === "arxiv") return '<span class="news-src news-src-arxiv">论文</span>';
+    if (src === "idcflare") return '<span class="news-src news-src-idc">IDC</span>';
+    if (src === "nodeseek") return '<span class="news-src news-src-ns">NS</span>';
+    if (src === "hn") return '<span class="news-src news-src-hn">HN</span>';
+    if (src === "simonw") return '<span class="news-src news-src-sw">SW</span>';
+    if (src === "arxiv") return '<span class="news-src news-src-arxiv">论文</span>'; // 存量旧帖仍有 arXiv
     return "";
   }
   function renderSeg() {

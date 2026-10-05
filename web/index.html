@@ -73,7 +73,7 @@
       <div class="two-col" style="margin-top:20px">
         <section data-feature="mail">
           <h2 class="h"><span class="h-ico" data-icon="mail"></span>邮箱 · 重要邮件</h2>
-          <div class="h-sub">LLM 自动审查全部未读，只显示重要邮件（学业/财务/安全/私人等），推广、群发与 Facebook 通知自动过滤，读过即移除；下方附 Canvas 站内信未读 · <a href="#" id="mailRefresh" style="color:var(--accent-ink)">立即刷新</a></div>
+          <div class="h-sub">自动筛选重要邮件，推广群发已过滤 · <a href="#" id="mailRefresh" style="color:var(--accent-ink)">立即刷新</a></div>
           <div class="card">
             <div id="mailCard"><div class="mail-empty">正在检查邮箱…</div></div>
             <div class="mail-account" id="canvasInbox"></div>
@@ -125,7 +125,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=58"></script>
+<script src="/assets/app.js?v=59"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "home", rail: true });
@@ -199,9 +199,12 @@
     var info = PortalSchedule.info(today);
     var courses = PortalSchedule.forDate(today);
     box.innerHTML = "";
-    document.getElementById("scheduleMeta").textContent = info.inSemester
-      ? ("第 " + info.week + " 周 · 仅作课表展示，不计入任务")
-      : "当前不在教学周内 · 课程仅作课表展示，不计入任务";
+    document.getElementById("scheduleMeta").textContent = (function () {
+      var head = info.inSemester ? "第 " + info.week + " 周" : "当前不在教学周内";
+      var next = PortalSchedule.nextBirthday(today);
+      if (next) head += " · " + (next.isToday ? "今天是 " + next.name + " 的生日 🎂" : "距离 " + next.name + " 的生日还有 " + next.days + " 天");
+      return head;
+    })();
     if (info.label) {
       var note = document.createElement("div");
       note.className = "schedule-note";

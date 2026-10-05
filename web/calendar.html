@@ -61,6 +61,7 @@
       padding-left: 4px;
     }
     .cal-note { margin-top: 3px; font-size: 10.5px; color: var(--bad); line-height: 1.25; }
+    .cal-birthday { color: #e07b1f; }
     /* 移动端月视图：紧凑格 + 数量角标 */
     .cal-badge {
       margin-top: 2px;
@@ -124,7 +125,7 @@
 </div>
 
 <script src="/assets/site-config.js"></script>
-<script src="/assets/app.js?v=58"></script>
+<script src="/assets/app.js?v=59"></script>
 <script>
 (function () {
   PortalLayout.mount({ active: "calendar", rail: false });
@@ -210,6 +211,18 @@
       var courseDay = PortalSchedule.forDate(d);
       var scheduleInfo = PortalSchedule.info(d);
       var shown = 0, courseIdx = 0, ocIdx = 0;
+      // 生日标记：月历/周历格子里用 🎂 点缀（点击当天详情有完整名单）
+      var dayBdays = (PortalSchedule.cache().birthdays || []).filter(function (person) {
+        var parts = String(person.date || "").split("-");
+        return parts.length === 2 && Number(parts[0]) === d.getMonth() + 1 && Number(parts[1]) === d.getDate();
+      });
+      if (dayBdays.length) {
+        var cake = document.createElement("div");
+        cake.className = "cal-note cal-birthday";
+        cake.textContent = "🎂 " + dayBdays.map(function (person) { return person.name; }).join("、");
+        cake.title = "生日";
+        cell.appendChild(cake);
+      }
       if (scheduleInfo.label) {
         var note = document.createElement("div");
         note.className = "cal-note";
@@ -320,6 +333,16 @@
     courseBox.innerHTML = "";
     var info = PortalSchedule.info(selected);
     var courses = PortalSchedule.forDate(selected);
+    var bday = (PortalSchedule.cache().birthdays || []).filter(function (person) {
+      var parts = String(person.date || "").split("-");
+      return parts.length === 2 && Number(parts[0]) === selected.getMonth() + 1 && Number(parts[1]) === selected.getDate();
+    });
+    if (bday.length) {
+      var cake = document.createElement("div");
+      cake.className = "schedule-note";
+      cake.textContent = "🎂 " + bday.map(function (person) { return person.name; }).join("、") + " 的生日";
+      courseBox.appendChild(cake);
+    }
     if (info.label) {
       var notice = document.createElement("div");
       notice.className = "schedule-note";

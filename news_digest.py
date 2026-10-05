@@ -16,7 +16,8 @@ import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
-import arxiv_news
+import arxiv_news  # 2026-10-05 起 arXiv 停抓；保留导入供 groom/历史工具用
+import hnsw_digest
 import jev_client
 import shuiyuan
 from datetime import datetime, timezone, timedelta
@@ -121,7 +122,7 @@ JEV_SUBSTANCE_MIN = 0.5
 def jev_verdict(source, title, category, summary, node=None):
     """Jev 审查：True 放行 / False 拒 / None 表示 Jev 不可用。结果按 (source, title) 缓存。
     三问：硬核技术（只对 linux.do、v2ex 要求——水源收的是经验帖）、有没有实质干货（2026-10-03 加）、是不是保研帖。"""
-    key = (source, (title or "")[:120])
+    key = (source, (title or "")[:120], len(summary or "") // 200)  # desc 长度分桶：RSS 首轮摘要短、次轮更新后变长，不应沿用旧判决
     hit = _JEV_TECH_CACHE.get(key)
     if hit is not None:
         return hit
@@ -161,6 +162,13 @@ def jev_verdict(source, title, category, summary, node=None):
         or (sub is not None and sub < JEV_SUBSTANCE_MIN)
         or (source in ("linux.do", "v2ex") and (tech is None or tech < JEV_TECH_MIN))
     )
+    # nodeseek/idcflare（主机圈，2026-10-05 接入）：不要求"硬核技术"，只要求干货——
+    # 测评、线路观察、商家动态对主机圈读者就是内容；收售拼车贴由干货门槛拦
+    if source in ("nodeseek", "idcflare"):
+        verdict = not (
+            (baoyan is not None and baoyan >= 0.75)
+            or (sub is not None and sub < 0.6)
+        )
     if len(_JEV_TECH_CACHE) > _JEV_CACHE_MAX:
         _JEV_TECH_CACHE.clear()
     _JEV_TECH_CACHE[key] = verdict
@@ -277,13 +285,85 @@ def fetch_v2ex():
     return items
 
 
-def build_digest():
-    """合并两个源，URL 归一化去重，生成当日摘要。"""
+def fetch_idcflare():
+    """idcflare.com（Discourse 主机论坛）最新话题 RSS。
+    2026-10-05 接入：latest.rss 可直连（top.rss/分类 RSS 有 Cloudflare 挑战，勿用）。
+    分类：交易/求助/测评/福利/茶馆——主机/VPS 圈，按内容关键词 + Jev 审查过滤。
+    """
+    data = _fetch_curl("https://idcflare.com/latest.rss")
+    root = ET.fromstring(data)
+    items = []
+    for it in root.findall("./channel/item"):
+        title = (it.findtext("title") or "").strip()
+        link = (it.findtext("link") or "").strip()
+        category = (it.findtext("category") or "").strip()
+        desc = _clean_html(it.findtext("description") or "")[:1200]
+        pub = it.findtext("pubDate") or ""
+        if not title or not link:
+            continue
+        if not is_technical("idcflare", unescape(title), category, desc, url=link):
+            continue
+        items.append({
+            "source": "idcflare",
+            "title": unescape(title),
+            "url": link,
+            "category": category,
+            "summary": desc,
+            "published": pub,
+        })
+    return items
+
+
+def fetch_nodeseek():
+    """NodeSeek（nodeseek.com）主机论坛官方 RSS：https://rss.nodeseek.com/
+    2026-10-05 接入：主站有 CF 挑战，但 rss 子域可直连（curl）。20 条最新帖，
+    category: daily(水)/trade(交易)/review(测评)。description 是正文摘要（短）。
+    预筛已于同日晚移除（用户反馈 Jev 额度花不完，统一走 is_technical→Jev）。
+    """
+    data = _fetch_curl("https://rss.nodeseek.com/")
+    root = ET.fromstring(data)
+    items = []
+    for it in root.findall("./channel/item"):
+        title = (it.findtext("title") or "").strip()
+        link = (it.findtext("link") or "").strip()
+        category = (it.findtext("category") or "").strip()
+        desc = _clean_html(it.findtext("description") or "")[:1200]
+        pub = it.findtext("pubDate") or ""
+        if not title or not link:
+            continue
+        if not is_technical("nodeseek", unescape(title), category, desc, url=link):
+            continue
+        items.append({
+            "source": "nodeseek",
+            "title": unescape(title),
+            "url": link,
+            "category": category,
+            "summary": desc,
+            "published": pub,
+        })
+    return items
+
+
+def build_digest(fast_only=False, only_nodeseek=False):
+    """合并各源，URL 归一化去重，生成当日摘要。arXiv 2026-10-05 起停抓（用户要求）。
+
+    fast_only=True 时跳过 linux.do（CF 限流源），供 15 分钟快轮用；
+    only_nodeseek=True 时只抓 NodeSeek（高频源，3 分钟快拍）。
+    """
     now = datetime.now(TZ)
     today = now.strftime("%Y-%m-%d")
     all_items = []
     errors = []
-    for name, fn in (("linux.do", fetch_linuxdo), ("v2ex", fetch_v2ex)):
+    if only_nodeseek:
+        try:
+            all_items.extend(fetch_nodeseek())
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"nodeseek: {type(exc).__name__}")
+        return _merge_dedupe(all_items, today, now, errors)
+    sources = (("linux.do", fetch_linuxdo), ("v2ex", fetch_v2ex), ("idcflare", fetch_idcflare), ("nodeseek", fetch_nodeseek))
+    for name, fn in sources:
+        if fast_only and name == "linux.do":
+            continue
         try:
             all_items.extend(fn())
         except Exception as exc:  # 单源失败不影响另一源
@@ -292,10 +372,15 @@ def build_digest():
         all_items.extend(shuiyuan.fetch_latest())
     except Exception as exc:  # noqa: BLE001
         errors.append(f"shuiyuan: {type(exc).__name__}")
-    try:
-        all_items.extend(arxiv_news.fetch_papers())
-    except Exception as exc:  # noqa: BLE001
-        errors.append(f"arxiv: {type(exc).__name__}")
+    for name, fn in (("hn", hnsw_digest.fetch_hn_best), ("simonw", hnsw_digest.fetch_simonw)):
+        try:
+            all_items.extend(fn())
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{name}: {type(exc).__name__}")
+    return _merge_dedupe(all_items, today, now, errors)
+
+
+def _merge_dedupe(all_items, today, now, errors):
     seen = set()
     blocked = list_blocked()
     items = []
@@ -305,12 +390,15 @@ def build_digest():
             continue
         seen.add(url)
         items.append(it)
-    # 三源轮转交错（各自保持热度顺序），展示更均衡
+    # 各源轮转交错（各自保持热度顺序），展示更均衡
     queues = [
         [i for i in items if i["source"] == "linux.do"],
         [i for i in items if i["source"] == "shuiyuan"],
-        [i for i in items if i["source"] == "arxiv"],
+        [i for i in items if i["source"] == "idcflare"],
+        [i for i in items if i["source"] == "nodeseek"],
         [i for i in items if i["source"] == "v2ex"],
+        [i for i in items if i["source"] == "hn"],
+        [i for i in items if i["source"] == "simonw"],
     ]
     merged = []
     idx = 0

@@ -106,6 +106,7 @@
     [/arXiv|论文|paper/i, "doc"],
     [/ChatGPT|GPT/, "chat"],
     [/Gemini|Sparkle/, "sparkles"],
+    [/Qwen|通义/, "sparkles"],
     [/Micu|Model|模型/, "brain"],
     [/Volcengine|Ark|火山/, "volcano"],
     [/Price|价格|比价/i, "money"],
@@ -710,6 +711,22 @@
       var day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       day.setDate(day.getDate() - ((day.getDay() + 6) % 7));
       return day;
+    },
+    // 生日数据（schedule.json 的 birthdays: [{name, date:"MM-DD"}]），返回最近一个生日及倒计时天数
+    nextBirthday: function (from) {
+      var list = scheduleCache.birthdays || [];
+      if (!list.length) return null;
+      var today = from ? new Date(from.getFullYear(), from.getMonth(), from.getDate()) : new Date();
+      var best = null;
+      list.forEach(function (person) {
+        var parts = String(person.date || "").split("-").map(Number);
+        if (parts.length !== 2 || !parts[0] || !parts[1]) return;
+        var candidate = new Date(today.getFullYear(), parts[0] - 1, parts[1]);
+        if (candidate < today) candidate.setFullYear(today.getFullYear() + 1); // 已过则算明年
+        var days = Math.round((candidate - today) / 86400000);
+        if (!best || days < best.days) best = { name: person.name, date: person.date, days: days, isToday: days === 0 };
+      });
+      return best;
     }
   };
 
