@@ -171,6 +171,35 @@ def drop(url):
                 _write(path, d)
 
 
+def _pick_quotas(pool_by_src, need, already_counts=None):
+    """按来源配额补位：任何单一来源不超过 SHOW*0.25（10 条）。
+    pool_by_src: {source: [key,...]}（已排除 seen/shown）；already_counts: 本轮
+    已选中各来源的计数（第二轮清 seen 后继续计数用）。返回按来源轮转的选取列表。"""
+    cap = max(1, int(SHOW * 0.25))
+    counts = dict(already_counts or {})
+    result = []
+    srcs = [s for s in pool_by_src if pool_by_src[s]]
+    while need > 0 and srcs:
+        progressed = False
+        for s in list(srcs):  # 每轮每个来源最多取一条，天然轮转
+            if need <= 0:
+                break
+            if counts.get(s, 0) >= cap:
+                srcs.remove(s)
+                continue
+            if not pool_by_src[s]:
+                srcs.remove(s)
+                continue
+            k = pool_by_src[s].pop()
+            counts[s] = counts.get(s, 0) + 1
+            result.append(k)
+            progressed = True
+            need -= 1
+        if not progressed:
+            break
+    return result
+
+
 def view(t, refresh=False):
     """当前用户主页的帖子列表。refresh=True 时整批从库存随机换。"""
     path = t.data("news_view.json")
@@ -189,14 +218,28 @@ def view(t, refresh=False):
         if refresh:
             seen |= set(shown)
             shown = []
+        # 2026-10-05 来源配额：展示集中任何单一来源不超过 25%（10/40）。
+        # 已展示超配的来源（旧数据），用"换一批"或自然删除/收藏流出逐步稀释；
+        # 补位时严格按配额轮转。
         need = SHOW - len(shown)
         if need > 0:
-            pool = [k for k in non_arxiv if k not in seen and k not in shown]
-            pick = random.sample(pool, min(need, len(pool)))
-            if len(pick) < need:  # 非arxiv轮完一遍：清空已看从头再来；宁可空位也不拿 arxiv 填（2026-10-05 用户要求下论文）
+            def available():
+                by = {}
+                for k in non_arxiv:
+                    if k in seen or k in shown:
+                        continue
+                    by.setdefault(stock[k].get("source", "?"), []).append(k)
+                for s in by:
+                    random.shuffle(by[s])
+                return by
+            pick = _pick_quotas(available(), need)
+            if len(pick) < need:  # 配额内不够：清 seen 从头再来（仍守配额）
                 seen = set()
-                pool2 = [k for k in non_arxiv if k not in shown and k not in pick]
-                pick += random.sample(pool2, min(need - len(pick), len(pool2)))
+                counts = {}
+                for k in pick:
+                    s = stock[k].get("source", "?")
+                    counts[s] = counts.get(s, 0) + 1
+                pick += _pick_quotas(available(), need - len(pick), already_counts=counts)
             shown += pick
         new = {"shown": shown, "seen": sorted(seen)}
         if new != v:
