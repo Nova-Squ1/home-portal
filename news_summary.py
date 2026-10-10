@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""news_summary.py — 给今日热帖生成省流摘要（Z.AI Coding Plan glm-5.3 主力，Codex gpt-5.6-luna 回退）。
+"""news_summary.py — 给今日热帖生成省流摘要（Codex gpt-6-luna）。
 
-主链路：https://api.z.ai/api/coding/paas/v4/chat/completions，key 读
-/root/.hermes/.env 的 ZAI_API_KEY（home-portal 以 root 运行可直接读）。
-回退链路：Codex OAuth /root/.codex/auth.json →
-https://chatgpt.com/backend-api/codex/responses（必须 stream=true）。
+主链路：Codex OAuth /root/.codex/auth.json →
+https://chatgpt.com/backend-api/codex/responses（stream=true, store=false）。
 按 URL 缓存摘要到 data/news_summary_cache.json，同一帖子只总结一次。
 任何失败返回 None，不阻塞新闻展示。
 """
@@ -19,9 +17,7 @@ import urllib.error
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_PATH = os.path.join(BASE_DIR, "data", "news_summary_cache.json")
 CODEX_AUTH = "/root/.codex/auth.json"
-HERMES_ENV = "/root/.hermes/.env"
-ZAI_MODEL = "glm-5.3"
-CODEX_MODEL = "gpt-5.6-luna"
+CODEX_MODEL = "gpt-6-luna"
 CACHE_MAX = 3000
 HTTP_TIMEOUT = 90
 
@@ -65,17 +61,6 @@ def _load_token():
         return None, None
 
 
-def _load_zai_key():
-    try:
-        with open(HERMES_ENV, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("ZAI_API_KEY="):
-                    return line.split("=", 1)[1].strip()
-    except OSError:
-        pass
-    return None
-
-
 def summarize(title, summary, url):
     """返回省流摘要字符串；失败或已有缓存时快速返回。"""
     key = url.split("#")[0].rstrip("/")
@@ -89,7 +74,7 @@ def summarize(title, summary, url):
         return None  # 正文空（水源限流留空）没有可总结的内容，等下轮抓到正文再生成
     content = "标题: " + title[:200] + "\n内容: " + (summary or "（无）")[:3000]
 
-    tldr = _summarize_zai(content) or _summarize_codex(content)
+    tldr = _summarize_codex(content)
 
     if not tldr:
         return None
@@ -104,44 +89,15 @@ def summarize(title, summary, url):
     return tldr
 
 
-def _summarize_zai(content, system=None, max_tokens=2400):
-    """Z.AI Coding Plan glm-5.3（主力）。"""
-    key = _load_zai_key()
-    if not key:
-        return None
-    payload = {
-        "model": ZAI_MODEL,
-        "messages": [
-            {"role": "system", "content": system or SYSTEM_PROMPT},
-            {"role": "user", "content": content},
-        ],
-        "max_tokens": max_tokens,
-        "temperature": 0.4,
-    }
-    req = urllib.request.Request(
-        "https://api.z.ai/api/coding/paas/v4/chat/completions",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + key,
-            "User-Agent": "home-portal-news/1.0",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-            data = json.load(resp)
-        return (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip() or None
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError, ValueError) as exc:
-        print("zai summary error:", type(exc).__name__, exc, flush=True)
-        return None
-
-
 def translate_titles(titles):
     """把一批英文论文标题译成中文；返回等长列表，失败返回 None。"""
-    out = _summarize_zai(json.dumps(titles, ensure_ascii=False), system=(
+    prompt = (
         "把输入 JSON 数组里的每个英文论文标题翻译成简洁准确的中文标题，模型名、方法名、缩写等专有名词保留原文。"
-        "只输出一个 JSON 字符串数组，长度和顺序与输入完全一致，不要任何解释。"), max_tokens=6000)
+        "只输出一个 JSON 字符串数组，长度和顺序与输入完全一致，不要任何解释。"
+    )
+    out = codex_complete(prompt, json.dumps(titles, ensure_ascii=False))
+    if not out:
+        return None
     try:
         zh = json.loads(out[out.index("["):out.rindex("]") + 1])
     except (TypeError, ValueError, AttributeError):
@@ -152,7 +108,7 @@ def translate_titles(titles):
 
 
 def _summarize_codex(content):
-    """Codex gpt-5.6-luna（回退）。"""
+    """Codex gpt-6-luna（省流摘要主力）。"""
     return codex_complete(SYSTEM_PROMPT, content)
 
 
