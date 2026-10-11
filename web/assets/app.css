@@ -648,6 +648,9 @@ h2.h {
   .rail { display: none; }
 }
 @media (max-width: 820px) {
+  /* 首页副标题保留莫斯科/伦敦/华盛顿时钟，手机不显示本地日期。 */
+  .home-page > .page-meta #todayDate,
+  .home-page > .page-meta #todayDate + span { display: none; }
   .app, .app.with-rail { grid-template-columns: 1fr; }
   /* ---------- 移动端侧栏抽屉 ---------- */
   .side {
